@@ -3,8 +3,8 @@
 usage: python3 coverage.py SCENARIO OUT.json [ROM]
 Patches E0C6200.clock at class level so pickled pets are covered too.
 """
-import json
 import os
+import json
 import pickle
 import sys
 
@@ -15,9 +15,47 @@ PCS = set()
 _orig = E0C6200.clock
 
 
+# --- task attribution: which main-loop task / interrupt is running each PC ---
+TASKS = {0x01CA: "spine", 0x0900: "life", 0x07BF: "input", 0x0200: "input",
+         0x0800: "life", 0x0A5D: "animation", 0x0B06: "link", 0x0B5B: "link",
+         0x0410: "screens", 0x0A00: "sound", 0x0E7B: "rng", 0x016E: "factory_test"}
+# The core vectors into page 1 of the CURRENT bank, so bank 1 has its own table.
+VECS = {0x102: "irq_timer", 0x104: "irq_04", 0x106: "irq_k0", 0x108: "irq_08",
+        0x10A: "irq_0A", 0x10C: "irq_prog_timer",
+        0x1102: "irq_timer", 0x1104: "irq_04", 0x1106: "irq_k0", 0x1108: "irq_08",
+        0x110A: "irq_0A", 0x110C: "irq_prog_timer"}
+ATTR = {}
+_ctx = {"cur": "spine", "stack": []}
+
+
+def _attribute(self):
+    pc = self._PC & 0x1FFF
+    c = _ctx
+    if pc in VECS:
+        c["stack"].append((c["cur"], self._SP))
+        c["cur"] = VECS[pc]
+    else:
+        # the stack starts at SP=0 and grows down through 0xFF, so compare
+        # modulo 256: the handler has returned once SP climbs back >= 3 above entry
+        while c["stack"] and 3 <= ((self._SP - c["stack"][-1][1]) & 0xFF) < 0x80:
+            c["cur"] = c["stack"].pop()[0]
+    if not c["stack"]:
+        if pc in TASKS:
+            c["cur"] = TASKS[pc]
+        elif 0x0132 <= pc <= 0x016D or pc == 0x0100 or 0x010E <= pc <= 0x0131:
+            c["cur"] = "spine"
+    ATTR.setdefault(pc, set()).add(c["cur"])
+
+
 def _clock(self):
     if not self._RESET and not self._HALT:
         PCS.add(self._PC & 0x1FFF)
+        _attribute(self)
+    _tick[0] += 1
+    if _tick[0] % 40000 == 0 and not self._RESET:
+        k = (self._RAM[0x09], self._RAM[0x0A])
+        if k not in FRAMES:
+            FRAMES[k] = list(self.get_VRAM())
     return _orig(self)
 
 
@@ -32,8 +70,21 @@ def _gm(self, addr):
     return _og(self, addr)
 
 
+TRANS = {}   # (old_mode, old_sub, new_mode, new_sub, pc) -> count
+FRAMES = {}  # (mode, sub) -> VRAM snapshot (list)
+_tick = [0]
+
+
 def _sm(self, addr, value):
     MEM.setdefault(addr, [set(), set()])[1].add(self._PC & 0x1FFF)
+    if addr in (0x09, 0x0A):
+        old9, oldA = _og(self, 0x09), _og(self, 0x0A)
+        r = _os(self, addr, value)
+        new9, newA = _og(self, 0x09), _og(self, 0x0A)
+        if (old9, oldA) != (new9, newA):
+            k = (old9, oldA, new9, newA, self._PC & 0x1FFF)
+            TRANS[k] = TRANS.get(k, 0) + 1
+        return r
     return _os(self, addr, value)
 
 
@@ -43,7 +94,13 @@ scenario, out = sys.argv[1], sys.argv[2]
 ROM = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("ROM", "roms/digimon_v1.bin")
 
 
+def _reset_ctx():
+    _ctx["cur"] = "spine"
+    _ctx["stack"] = []
+
+
 def fresh():
+    _reset_ctx()
     p = h.Pet(ROM)
     p.reset()
     p.run_seconds(1)
@@ -108,9 +165,9 @@ elif scenario == "child_life":
     menu_tour(p)
 elif scenario == "night":
     p = pickle.load(open("st_v1_childA.pkl", "rb"))
-    # 0x48-0x4B hold the clock as minute-units, minute-tens, hour (2 nibbles).
-    # Jump to 19:58 so the bedtime/lights code runs, then to 06:58 for waking.
-    for addr, v in zip(range(0x48, 0x4C), [8, 5, 0x3, 0x1]):
+    # Real-time clock: M(1A-1B) seconds BCD, M(1C-1D) minutes BCD, M(1E) hour 1-12,
+    # M(1F) bit0 = PM. Set 7:58 PM so the bedtime code runs, later 6:58 AM for waking.
+    for addr, v in zip(range(0x1A, 0x20), [0, 0, 8, 5, 7, 1]):
         p.poke(addr, v)
     p.run_seconds(2 * 3600)
     menu_tour(p)
@@ -118,7 +175,7 @@ elif scenario == "night":
     p.press("B", hold_s=0.12, gap_s=0.6)
     p.press("B", hold_s=0.12, gap_s=0.6)
     p.run_seconds(3600)
-    for addr, v in zip(range(0x48, 0x4C), [8, 5, 0x6, 0x0]):
+    for addr, v in zip(range(0x1A, 0x20), [0, 0, 8, 5, 6, 0]):
         p.poke(addr, v)
     p.run_seconds(3600)
     menu_tour(p)
@@ -203,6 +260,9 @@ else:
     raise SystemExit("unknown scenario")
 
 json.dump({"pcs": sorted(PCS),
-           "mem": {"%03X" % a: {"r": sorted(v[0]), "w": sorted(v[1])} for a, v in MEM.items()}},
+           "mem": {"%03X" % a: {"r": sorted(v[0]), "w": sorted(v[1])} for a, v in MEM.items()},
+           "transitions": [[*k, c] for k, c in TRANS.items()],
+           "attr": {"%04X" % p: sorted(v) for p, v in ATTR.items()},
+           "frames": {"%X%X" % k: v for k, v in FRAMES.items()}},
           open(out, "w"))
 print(scenario, "executed PCs:", len(PCS))

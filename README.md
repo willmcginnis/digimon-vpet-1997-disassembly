@@ -1,53 +1,47 @@
 # Digimon V-Pet (1997) — a literate disassembly
 
-A prose walk through the firmware of Bandai's original *Digital Monster* virtual pet
-(Ver. 1, with Ver. 2 compared alongside), written in the spirit of Knuth's literate
-programming: the program explained in the order a reader wants to meet it, with short
-excerpts of the machine code where they carry the argument.
+**[Read the article → `article/README.md`](article/README.md)**
 
-The book lives in [`book/`](book/). Start with
-[`book/00-the-machine.md`](book/00-the-machine.md).
+A long-form walk through the firmware of Bandai's original *Digital Monster* virtual pet
+(Ver. 1, with Ver. 2 compared alongside): an Epson E0C6200 4-bit microcontroller, 8,192
+twelve-bit instructions, nibble-wide memory, a 32 × 16 dot LCD, three buttons and one metal
+prong. It covers the memory maps, the super-loop and its interrupts, how display RAM
+becomes pixels, the mode machine that is the whole user interface, timekeeping, injury and
+death, the dice, the link protocol, the exact battle odds, the factory test, and what
+happens to the old playground cheats.
 
-## What is established, and how
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="article/figures/rom_atlas-dark.svg">
+  <img src="article/figures/rom_atlas-light.svg" alt="Atlas of the ROM: every instruction coloured by the task that executed it.">
+</picture>
 
-Every claim in the book is labelled:
+Every claim in the article is tagged **measured** (observed by running the ROM in an
+emulator, or checked mechanically), **read** (inferred from the code) or **documented**
+(from a named outside source).
 
-- **measured** — observed by running the ROM in an emulator (button presses, linked
-  battles between two emulated units, memory and I/O traces), or checked mechanically
-  (e.g. byte-identical reassembly);
-- **read** — inferred from reading the code, not separately exercised.
+## What is here
 
-Headline numbers for Ver. 1 (all measured):
-
-| | |
+| Path | |
 |---|---|
-| ROM size | 8,192 twelve-bit instruction words (2 banks × 16 pages × 256) |
-| Decoded and reassembled byte-identically | 8,192 / 8,192 (Ver. 1 and Ver. 2) |
-| Reached by static control-flow recovery | 8,087 / 8,192 (74 of the rest are `nop7` filler) |
-| Executed across the emulation scenarios | 7,043 / 8,192 |
-| Subroutines (`CALL`/`CALZ` targets + vectors) | 281 |
+| `article/` | the article, its appendices (every subroutine, RAM, I/O) and its figures |
+| `tools/static/` | control-flow walker, a disassembler with three fixes, an assembler for the lossless round trip, subsystem classifier, name tables |
+| `tools/emulation/` | headless driver for BrickEmuPy's E0C6200 core, a two-unit link cable with tamper hook, trace harness (coverage, memory access, task attribution, mode transitions, screens), the experiments, and a script that rebuilds every saved state from power-on |
+| `tools/figures/` | the figure and appendix generators |
+| `ghidra/` | headless Ghidra 12 scripts for the E0C6S46 processor module: seed and export, then apply the recovered map |
+| `data/` | small derived data: the battle threshold table, the LCD layout, the Ver.1/Ver.2 alignment |
+| `roms/` | checksums only |
 
 ## No ROM here
 
 Bandai's firmware is not distributed. Bring your own dump; `roms/SHA256SUMS` lists the
-images this work was done against. Full machine listings reproduce the ROM byte for byte,
-so they are generated locally into `generated/` and never committed.
+images this work was done against. Full machine listings reproduce the ROM byte for byte, so
+they are generated locally into `generated/` and never committed. The article quotes short
+excerpts only.
 
-## Tools
+## Thanks
 
-- `tools/static/walker.py` — control-flow recovery for the E0C6200 family (PSET paging,
-  CALZ, `JPBA` jump tables including the doubled-index idiom, RETS skip-returns), seeded
-  optionally with measured program counters.
-- `tools/static/asm.py` — an assembler built by inverting the disassembler; used to prove
-  the listing is lossless.
-- `tools/static/dasm_fixed.py` — three corrections to BrickEmuPy's disassembler found by
-  that round trip (see the errata appendix).
-- `tools/emulation/` — a headless driver around [BrickEmuPy](https://github.com/azya52/BrickEmuPy)'s
-  E0C6200 core, a two-unit link cable, coverage and memory tracing, and the experiments
-  behind the battle and Easter-egg chapters.
-- `ghidra/` — headless scripts for Ghidra 12 with the
-  [E0C6S46 processor module](https://github.com/Veryyes/E0C6S46-Ghidra-Processor): seed the
-  vectors and export, then apply the recovered map (computed-jump references, functions,
-  names, RAM labels).
-
-Point `BRICK` at a BrickEmuPy checkout and `ROM` at your dump.
+To azya52 for [BrickEmuPy](https://github.com/azya52/BrickEmuPy), whose emulator and LCD
+faces made all of the measuring possible; to Veryyes for the
+[E0C6S46 Ghidra module](https://github.com/Veryyes/E0C6S46-Ghidra-Processor); to BladeSabre
+and the [DMComm](https://dmcomm.github.io/) project for the link protocol and the care
+mechanics; and to humulos and NHOKO for the growth charts.

@@ -12,10 +12,15 @@ import java.io.*;
 import java.util.*;
 
 public class SeedAndExport extends GhidraScript {
+    private AddressSpace romSpace;
+    /** ROM word number -> Address (getAddress takes a byte offset in this word-addressed space). */
+    private Address W(long word) { return romSpace.getAddress(word * romSpace.getAddressableUnitSize()); }
+
     @Override
     public void run() throws Exception {
         String outDir = getScriptArgs().length > 0 ? getScriptArgs()[0] : "/tmp";
-        AddressSpace rom = currentProgram.getAddressFactory().getDefaultAddressSpace();
+        AddressSpace rom = currentProgram.getAddressFactory().getAddressSpace("rom");
+        romSpace = rom;
         Listing listing = currentProgram.getListing();
         FunctionManager fm = currentProgram.getFunctionManager();
 
@@ -23,7 +28,7 @@ public class SeedAndExport extends GhidraScript {
         long[] seeds = {0x100, 0x102, 0x104, 0x106, 0x108, 0x10A, 0x10C};
         String[] names = {"reset_vector", "int_vec_02", "int_vec_04", "int_vec_06", "int_vec_08", "int_vec_0A", "int_vec_0C"};
         for (int i = 0; i < seeds.length; i++) {
-            Address a = rom.getAddress(seeds[i]);
+            Address a = W(seeds[i]);
             new DisassembleCommand(a, null, true).applyTo(currentProgram, monitor);
             currentProgram.getSymbolTable().createLabel(a, names[i], SourceType.USER_DEFINED);
             addEntryPoint(a);
@@ -63,20 +68,24 @@ public class SeedAndExport extends GhidraScript {
                         f.getBody().getNumAddresses(), n, cr, ce);
             }
         }
-        // Coverage: which ROM words are instructions vs undefined
+        // Coverage: which ROM words are covered by an instruction (one Address per word)
         long code = 0, undef = 0;
         try (PrintWriter cw = new PrintWriter(new FileWriter(outDir + "/coverage.tsv"))) {
-            Address start = rom.getAddress(0), end = rom.getAddress(0x1FFF);
-            String state = null; Address runStart = start;
-            for (Address a = start; a.compareTo(end) <= 0; a = a.next()) {
-                String s = listing.getInstructionContaining(a) != null ? "code" : "undef";
+            String state = null; long runStart = 0;
+            for (long w = 0; w < 0x2000; w++) {
+                String s = listing.getInstructionContaining(W(w)) != null ? "code" : "undef";
                 if (s.equals("code")) code++; else undef++;
                 if (!s.equals(state)) {
-                    if (state != null) cw.printf("%s\t%s\t%s%n", runStart, a.previous(), state);
-                    state = s; runStart = a;
+                    if (state != null) cw.printf("%04X\t%04X\t%s%n", runStart, w - 1, state);
+                    state = s; runStart = w;
                 }
-                if (a.equals(end)) { cw.printf("%s\t%s\t%s%n", runStart, a, state); break; }
             }
+            cw.printf("%04X\t%04X\t%s%n", runStart, 0x1FFFL, state);
+        }
+        // words that START an instruction (for comparison with the walker)
+        try (PrintWriter iw = new PrintWriter(new FileWriter(outDir + "/instr_starts.txt"))) {
+            for (long w = 0; w < 0x2000; w++)
+                if (listing.getInstructionAt(W(w)) != null) iw.printf("%04X%n", w);
         }
         // References into RAM/IO from instructions
         try (PrintWriter rw = new PrintWriter(new FileWriter(outDir + "/refs.tsv"))) {

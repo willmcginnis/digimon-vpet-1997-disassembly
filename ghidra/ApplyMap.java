@@ -17,10 +17,15 @@ import java.nio.file.*;
 import java.util.*;
 
 public class ApplyMap extends GhidraScript {
+    private AddressSpace romSpace;
+    /** ROM word number -> Address (getAddress takes a byte offset in this word-addressed space). */
+    private Address W(long word) { return romSpace.getAddress(word * romSpace.getAddressableUnitSize()); }
+
     @Override
     public void run() throws Exception {
         List<String> lines = Files.readAllLines(Paths.get(getScriptArgs()[0]));
         AddressSpace rom = currentProgram.getAddressFactory().getAddressSpace("rom");
+        romSpace = rom;
         AddressSpace ram = currentProgram.getAddressFactory().getAddressSpace("ram");
         Listing listing = currentProgram.getListing();
         FunctionManager fm = currentProgram.getFunctionManager();
@@ -31,7 +36,7 @@ public class ApplyMap extends GhidraScript {
         AddressSet toDis = new AddressSet();
         for (String l : lines) {
             String[] f = l.split("\t", -1);
-            if (f[0].equals("code")) toDis.add(rom.getAddress(Long.parseLong(f[1], 16)));
+            if (f[0].equals("code")) toDis.add(W(Long.parseLong(f[1], 16)));
         }
         for (AddressRange r : toDis) {
             if (listing.getInstructionAt(r.getMinAddress()) == null) {
@@ -39,7 +44,7 @@ public class ApplyMap extends GhidraScript {
             }
         }
         for (AddressRange r : toDis)
-            for (Address a = r.getMinAddress(); a.compareTo(r.getMaxAddress()) <= 0; a = a.add(1))
+            for (Address a = r.getMinAddress(); a.compareTo(r.getMaxAddress()) <= 0; a = a.add(romSpace.getAddressableUnitSize()))
                 if (listing.getInstructionAt(a) == null &&
                         new DisassembleCommand(a, new AddressSet(a), false).applyTo(currentProgram, monitor))
                     code++;
@@ -50,17 +55,17 @@ public class ApplyMap extends GhidraScript {
             String cmt = f.length > 3 ? f[3] : "";
             switch (f[0]) {
                 case "jpba": {
-                    Address src = rom.getAddress(Long.parseLong(f[1], 16));
+                    Address src = W(Long.parseLong(f[1], 16));
                     for (String t : f[2].split(",")) {
                         if (t.isEmpty()) continue;
-                        rm.addMemoryReference(src, rom.getAddress(Long.parseLong(t, 16)),
+                        rm.addMemoryReference(src, W(Long.parseLong(t, 16)),
                                 RefType.COMPUTED_JUMP, SourceType.USER_DEFINED, 0);
                         jrefs++;
                     }
                     break;
                 }
                 case "func": {
-                    Address a = rom.getAddress(Long.parseLong(f[1], 16));
+                    Address a = W(Long.parseLong(f[1], 16));
                     Function fn = fm.getFunctionAt(a);
                     if (fn == null) {
                         new CreateFunctionCmd(a).applyTo(currentProgram, monitor);
@@ -74,7 +79,7 @@ public class ApplyMap extends GhidraScript {
                     break;
                 }
                 case "label": {
-                    Address a = rom.getAddress(Long.parseLong(f[1], 16));
+                    Address a = W(Long.parseLong(f[1], 16));
                     st.createLabel(a, f[2], SourceType.USER_DEFINED);
                     if (!cmt.isEmpty()) setPreComment(a, cmt);
                     labels++;

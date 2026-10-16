@@ -123,7 +123,8 @@ What each found, for Ver. 1:
 | Words decoded and reassembled byte-identically | **8,192 / 8,192** (Ver. 1 and Ver. 2) — measured |
 | Words reached by the walker | **8,087 / 8,192**; 74 of the remainder are `nop7` filler — measured |
 | Words actually executed across the scenarios | **7,043 / 8,192** — measured |
-| Executed words Ghidra's auto-analysis left undefined | **362** — measured |
+| Words Ghidra's auto-analysis covers on its own (vectors seeded) | **4,788 / 8,192** — measured |
+| Executed words Ghidra alone leaves undefined | **2,592**; with the recovered map applied, **0** — measured |
 | Executed words the walker missed before being seeded with the trace | **75** — measured |
 | Subroutines (`CALL`/`CALZ` targets plus interrupt vectors) | **281** — measured |
 
@@ -135,15 +136,45 @@ species slot forced in turn and allowed to reach its next evolution.
 
 The round trip paid for itself early. It caught three bugs in BrickEmuPy's
 *disassembler* (not its emulation, which is correct): `CP YL,i` printed as `ADC YL,i`,
-`DEC M(n)` printed as `INC M(n)`, and `RLC r`'s doubled register field. Ghidra's gaps came
-from two places: it cannot follow `JPBA`, and the module treats a `PSET`-prefixed `CALL`
-as staying in the current bank, which the emulator's core does not. Details in §17.
+`DEC M(n)` printed as `INC M(n)`, and `RLC r`'s doubled register field. Ghidra's gap is
+almost entirely `JPBA`: a computed jump it cannot follow, which hides the species dispatch
+table and nearly all of bank 1 behind it. Details in §17.
 
 ---
 
 ## 3. An atlas of the ROM
 
-<!-- ATLAS -->
+Before reading any routine, it helps to see the whole program at once. Every one of the
+8,192 words below is coloured by **who ran it**: the main-loop task or interrupt that was
+executing when that instruction executed, recorded across all the scenarios
+(**measured**). Runs of the bitmap-writing instructions are coloured by shape instead, and
+words the scenarios never reached fall back to a static assignment or grey.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/rom_atlas-dark.svg">
+  <img src="figures/rom_atlas-light.svg" alt="Atlas: 32 rows of 256 words, coloured by the task that executed each word. Bank 0 is a patchwork of logic; bank 1 is mostly bitmap runs.">
+</picture>
+
+Three things are visible before reading a single instruction:
+
+- **Bank 0 is the program; bank 1 is mostly pictures.** Bitmap runs cover
+  {{GFX_B1}} of bank 1's 4,096 words and {{GFX_B0}} of bank 0's.
+- **Page 0 is the shared library** (dark), and page 1 begins with the vectors and the main
+  loop.
+- **Logic is clustered by task.** The key handling, the mode machine, the life clock and the
+  link code each occupy recognisable stretches of bank 0, because Bandai laid the code out
+  page by page and reached across pages with `PSET`.
+
+The RAM tells the same story from the other side (**measured** from access traces): each
+nibble coloured by the task whose code writes it.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/ram_map-dark.svg">
+  <img src="figures/ram_map-light.svg" alt="RAM map: page 0 labelled with the game's variables, coloured by writing task; pages 1 and 2 mostly shared scratch; the stack at the top of page 0.">
+</picture>
+
+The named variables are listed in [Appendix B](appendix-ram.md).
+
 
 ---
 
@@ -228,6 +259,31 @@ again. If not, it drops the CPU back to its slow oscillator, enables interrupts 
 | `0102` | `17B9` | **Heartbeat.** Reads the timer's 2 Hz factor and turns it into flags in `M(00)`: bit 0 on every tick (the animation frame), bit 3 flipping each half-second, bits 1–2 set once a second. The clock and the animation count these flags. |
 | `0106` | `1AC6` | **Key wake.** Acknowledges the button interrupt, disables it, and returns. It does no work; it exists only to end the `HALT` so the loop can scan the keys. |
 | `010C` | `1BB3` | **Sound player.** Driven by the programmable timer: walks a note list in RAM from `280`, reloads the timer for each note, and switches the buzzer off at the end. |
+
+### Two vector tables, because `RET` forgets the bank
+
+The handlers live in bank 1, and the E0C6200's `RET` restores the page and step but **not
+the bank**. An interrupt that arrives while bank-0 code is running pushes a bank-0 return
+address; if the bank-1 handler simply returned, execution would resume at the right step in
+the wrong bank. The core also vectors into page 1 of *whichever bank is executing*
+(`PC = bank | 0x100 | vector` in the emulator's core), and Bandai used both facts:
+
+```asm
+; bank 0 vector table                 ; bank 1 vector table
+0102  pset 0x17 / jp 17D6             1102  pset 0x17 / jp 17B9   ; heartbeat body
+0106  pset 0x1E / jp 1EDE             1106  pset 0x1A / jp 1AC6   ; key-wake body
+010C  pset 0x1C / jp 1CEB             110C  pset 0x1B / jp 1BB3   ; sound body
+
+17D6  call 17B9           ; bank-0 path: run the body as a subroutine inside bank 1,
+17D7  pset 0x00           ;   then jump to a RET that lives in bank 0,
+17D8  jp 000F             ;   so the final return lands in the right bank
+```
+
+An interrupt taken in bank 1 goes straight to the body, whose own `RET` already returns
+within bank 1. An interrupt taken in bank 0 goes through a three-instruction trampoline that
+borrows the `RET` at `0x000F`, the last instruction of `cpu_clock_slow`. Both tables
+execute in the scenarios (**measured**); the static walker missed the bank-1 table until
+the trace pointed at it.
 
 The design is a classic low-power super-loop. The interesting consequence comes in §11:
 the dice advance once per pass of this loop, so anything that makes the loop run more
@@ -374,13 +430,100 @@ is the one that settles the playground rumour (§15):
 
 ## 9. The mode machine
 
-<!-- MODES -->
+The whole user interface is one nibble. `M(09)` holds the **mode**, `M(0A)` the step within
+it, and `task_mode_render` at `0x0410` is a switch on the mode (**read**):
+
+```asm
+0410  callz 0089
+0411  call 0409
+0412  ld X, 0x09
+0413  ldpx A, M(X)        ; A = mode, X -> submode
+0414  cp A, 0x1
+0415  pset 0x05 / jp z, 0523    ; 1: clock
+0417  cp A, 0x0
+0418  jp z, 04E6                ; 0: home
+...
+041B  cp A, 0x3
+041C  jp c, 042C                ; 2: STATUS pages
+041D  jp z, 04B3                ; 3: FEED
+041E  cp A, 0x5
+041F  pset 0x06 / jp c, 0656    ; 4: TRAIN
+0421  pset 0x07 / jp z, 0700    ; 5: BATTLE
+...
+0428  pset 0x05 / jp z, 0577    ; 9: evolving
+042A  pset 0x01 / jp 01DB       ; A and up: dying, grave
+```
+
+Every mode change the scenarios produced was recorded, with the instruction that wrote
+it (**measured**):
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="figures/mode_machine-dark.svg">
+  <img src="figures/mode_machine-light.svg" alt="Mode machine: home in the centre; A steps through the seven menu modes 2 to 8; C or an idle timeout returns home; B opens the clock; the stage timer starts an evolution; six untreated hours lead to dying and the grave; A+C on the grave returns to home.">
+</picture>
+
+The design decision that makes the code small is visible in the bottom row: **the menu
+cursor is the mode itself.** Modes 2 to 8 are the seven icons in order — STATUS, FEED,
+TRAIN, BATTLE, FLUSH, LIGHT, MEDIC — and pressing A on any of them is a single
+`add M(X), 1` at `0x0268` (**measured**: every A press in every scenario took this path).
+Selecting with B moves into the mode's sub-steps. C goes home, and so does leaving a menu
+alone: `0x0866` returns any of modes 2–8 to home when an idle counter at `M(2D)`, cleared
+by every key at `0x0222`, reaches 60 (**read**; the transition **measured**).
+
 
 ---
 
 ## 10. Time, care and death
 
-<!-- LIFE -->
+### Two clocks
+
+The game keeps two separate times, both counted from the heartbeat flags in `M(00)` by
+`task_timekeeping` and `task_life_clock` (**read**; the counters **measured** advancing):
+
+| | Where | Format |
+|---|---|---|
+| Wall clock | `M(1A–1B)` seconds, `M(1C–1D)` minutes, `M(1E)` hour, `M(1F)` bit 0 = PM | BCD, 12-hour |
+| Stage timer | `M(46–47)` seconds, `M(48–49)` minutes, `M(4A–4B)` hours | BCD minutes, 8-bit hours |
+
+The wall clock drives the daily schedule. Once an hour `sleep_schedule_check` at `0x09A0`
+compares the hour against two per-species values, a bedtime `M(66)` and a waking hour
+`M(67)` — the per-Digimon "awake from … to …" hours that the community charts list
+(**documented**: humulos/NHOKO) — and raises the sleep or wake flags in `M(54)`.
+
+The stage timer drives growth. `M(4C–4F)` holds the stage time at which the next
+evolution is due. When the timer reaches it, `0x05AB` sets the mode to 9 and the
+evolution animation runs (**measured**: writing a time two minutes ahead into `M(4C–4F)`
+made a Koromon evolve two minutes later, and forcing each slot in turn and doing the same
+triggered mode 9 for 15 of the 16 slots). Choosing what to become is done on the way, by
+the code around `0x0D10` (**read**).
+
+### Injury and death
+
+A battle can leave the Digimon injured: bit 0 of `M(05)` (**measured**: the seventh
+consecutive battle between two emulated children injured one). Each battle also takes one
+from the counter at `M(8C–8D)` (**measured** across consecutive battles; that it is the
+energy the community describes is **read**). An injury left untreated is counted in hours, and at six the code at `0x08D3`
+calls `enter_death_sequence` (`0x07D7`), which sets mode B (**measured**: the death
+sequence began at 359 minutes):
+
+```asm
+08D6  ld X, 0x38
+08D7  callz 002A          ; injury minutes (BCD, wraps at 60)
+08D8  jp nz, 08EB
+08D9  add M(X), 0x1       ; another full hour
+08DA  cp M(X), 0x6
+08DB  jp c, 08EB
+08DC  pset 0x07
+08DD  call 07D7           ; six hours untreated: die
+```
+
+Mode B plays the dying animation; `0x07E9` then sets mode C, the grave, which stays until
+A and C are pressed together (§15).
+
+The finer rules of care — how protein moves energy, enhancement and the chance of injury,
+how care mistakes subtract — were worked out on real hardware by the DMComm project and
+match the variables named here (**documented**: DMComm, *Original V-Pet*).
+
 
 ---
 
@@ -546,7 +689,7 @@ And two real things the rumours missed:
 
 ## 16. Ver. 1 against Ver. 2
 
-Ver. 2 swaps the roster (Punimon, Tsunomon, Gabumon, Elecmon and their lines, per humulos)
+Ver. 2 swaps the roster (Punimon, Tsunomon, Gabumon and their lines, per humulos)
 but not the machine. Aligning the two instruction streams, with jump targets reduced to
 their 8-bit step so that shifted code still matches (**measured**):
 
@@ -573,21 +716,34 @@ four words later in Ver. 2 (`0x0D7E`), and executing it yields the same threshol
 ### Ghidra and the E0C6S46 module
 
 The community module (Veryyes/E0C6S46-Ghidra-Processor) compiles cleanly with Ghidra 12's
-SLEIGH compiler and decodes every instruction correctly. Auto-analysis of Ver. 1 found
-303 functions but left 362 *executed* words undefined (**measured**). Two causes:
+SLEIGH compiler and decodes every instruction correctly. Seeded with the reset and
+interrupt vectors, auto-analysis of Ver. 1 covers 4,788 of 8,192 words — 3,603 in bank 0
+but only 1,185 in bank 1 — and leaves 2,592 *executed* words undefined (**measured**).
 
-1. **`JPBA` is a computed jump** to `B:A` on the current or `PSET` page. Ghidra cannot know
-   B and A, so the jump tables behind it — the per-species table at `0x1200`, the mode
-   handlers, the battle state machine — stay dark. `ghidra/ApplyMap.java` adds the
-   recovered targets as computed-jump references.
-2. **A `PSET`-prefixed `CALL` keeps the current bank** in the module
-   (`:CALL s (thisPcb) is ... pprev=1`). In the emulator's core, which demonstrably runs
-   the game, the `PSET` supplies the bank too.
+The cause is **`JPBA`**, a computed jump to `B:A` on the current or `PSET` page. Ghidra
+cannot know B and A, so everything reached only through the 25 jump tables stays dark:
+the per-species table at `0x1200` (and with it most of bank 1), the mode handlers, the
+battle state machine. `ghidra/ApplyMap.java` adds the walker's recovered targets as
+computed-jump references and disassembles the rest; afterwards Ghidra covers 8,093 words
+and no executed word is undefined (**measured**).
 
-Of Ghidra's 303 functions, 127 are not call targets at all: they are cross-page `JP`
-targets that Ghidra promotes to functions. That is a different definition of "function",
-not a disagreement about code; this article counts subroutines as `CALL`/`CALZ` targets plus
-interrupt vectors (281).
+Two smaller things are worth knowing if you use the module on other ROMs:
+
+- A `PSET`-prefixed `CALL` keeps the current bank in the module
+  (`:CALL s (thisPcb) is ... pprev=1`), while the emulator's core takes the bank from the
+  `PSET`. This ROM never makes a cross-bank call (**measured**: 0 sites; bank 1 is entered
+  only by 79 cross-bank `PSET`+`JP`s, which the module handles correctly), so here it does
+  not matter.
+- The `rom` space is word-addressed, and Ghidra's `AddressSpace.getAddress()` takes a
+  *byte* offset: word `0x110` is `getAddress(0x220)`. The module's `.pspec` writes its
+  `start` symbol as `rom:0x110`, which lands on word `0x088`. Scripts that seed or label
+  ROM words must multiply by the addressable unit size (the scripts here do; an earlier
+  draft of them did not, and measured nonsense).
+
+Of Ghidra's 313 functions, 186 match the walker's subroutines; 121 of the other 127 are
+cross-page `JP` targets that Ghidra promotes to functions. That is a different definition
+of "function", not a disagreement about code; this article counts subroutines as
+`CALL`/`CALZ` targets plus interrupt vectors (281).
 
 ### BrickEmuPy's disassembler
 

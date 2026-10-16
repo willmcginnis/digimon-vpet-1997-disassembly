@@ -23,9 +23,14 @@ from dasm_fixed import FixedDasm as E0C6200dasm  # noqa: E402
 
 ROM_WORDS = 0x2000
 RESET = 0x100
+# Interrupts vector into page 1 of the bank that is executing, so both banks
+# carry a vector table (bank 1's jumps straight into the handler bodies).
 VECTORS = {0x100: "reset_vector", 0x102: "irq_vec_02", 0x104: "irq_vec_04",
            0x106: "irq_vec_06", 0x108: "irq_vec_08", 0x10A: "irq_vec_0A",
-           0x10C: "irq_vec_0C"}
+           0x10C: "irq_vec_0C",
+           0x1100: "b1_reset_vector", 0x1102: "b1_irq_vec_02", 0x1104: "b1_irq_vec_04",
+           0x1106: "b1_irq_vec_06", 0x1108: "b1_irq_vec_08", 0x110A: "b1_irq_vec_0A",
+           0x110C: "b1_irq_vec_0C"}
 
 
 def load(path):
