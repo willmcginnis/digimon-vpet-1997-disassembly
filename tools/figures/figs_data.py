@@ -125,7 +125,7 @@ def fig_atlas(wc, theme, executed):
         y = ly + rowi * 22
         s.rect(x, y - 10, 14, 14, colour(t, c), rx=2)
         s.text(x + 22, y + 1, "%s  (%d)" % (LABEL[c], counts.get(c, 0)), 11)
-    s.text(24, ly + 5 * 22 + 12, "%d of 8,192 words executed across the scenarios." % len(executed), 11, t["text2"])
+    s.text(24, ly + 5 * 22 + 12, "{:,} of 8,192 words executed across the scenarios.".format(len(executed)), 11, t["text2"])
     return s, counts
 
 
@@ -133,7 +133,8 @@ RAM_NAMES = {
     0x00: "tick", 0x01: "anim", 0x02: "key", 0x03: "kst", 0x05: "stat", 0x06: "ui", 0x09: "MODE",
     0x0A: "sub", 0x0B: "SLOT", 0x0C: "ovl", 0x0D: "snd", 0x10: "tx", 0x11: "tx", 0x12: "tx~", 0x13: "tx~",
     0x15: "menu", 0x17: "sseq", 0x1A: "sec", 0x1B: "sec", 0x1C: "min", 0x1D: "min", 0x1E: "hr", 0x1F: "pm",
-    0x36: "inj", 0x37: "inj", 0x38: "injh", 0x46: "s.s", 0x47: "s.s", 0x48: "s.m", 0x49: "s.m", 0x4A: "s.h",
+    0x07: "poop", 0x36: "inj#", 0x37: "inj#", 0x38: "i.m", 0x39: "i.m", 0x3A: "i.h", 0x80: "p.t", 0x81: "p.t",
+    0x82: "p.t", 0x46: "s.s", 0x47: "s.s", 0x48: "s.m", 0x49: "s.m", 0x4A: "s.h",
     0x4B: "s.h", 0x4C: "evo", 0x4D: "evo", 0x4E: "evo", 0x4F: "evo", 0x54: "sched", 0x66: "bed",
     0x67: "wake", 0x75: "b.inj", 0x76: "lifef", 0x78: "bst", 0x79: "RES", 0x7B: "enh", 0x7C: "rx",
     0x7D: "rx", 0x7E: "o.enh", 0x7F: "o.slt", 0x8C: "nrg", 0x8D: "nrg", 0xA0: "RNG", 0xA1: "RNG",
@@ -141,33 +142,51 @@ RAM_NAMES = {
 }
 
 
+def bulk_writers(mem, limit=48):
+    """PCs that sweep more than `limit` distinct RAM nibbles: clear loops (at power-on, at
+    hatching), block copies into the draw buffers, the test-pattern fill. They touch many
+    nibbles once each and say little about which task a variable belongs to."""
+    n = Counter()
+    for a, (rd, wr) in mem.items():
+        if a < 0x300:
+            for p in wr:
+                n[p] += 1
+    return {p for p, k in n.items() if k > limit}
+
+
 def fig_ram(mem, attr, theme):
+    bulk = bulk_writers(mem)
     cell = 30
-    ox, oy = 60, 110
+    ox, oy = 60, 136
     small = 9
     W, H = ox + 16 * cell + 60 + 2 * (16 * small + 30) + 60, oy + 16 * cell + 150
     s = SVG(W, H, theme, "RAM map of the Ver.1 firmware",
             "Each nibble coloured by the task that writes it (measured); page 0 labelled.")
     t = s.t
     s.text(24, 32, "RAM: who writes each nibble", 18, weight="bold")
-    s.text(24, 54, "Colour = the main-loop task or interrupt whose code wrote the nibble (measured from access "
-                   "traces). Pale = read but never written; blank = untouched.", 12, t["text2"])
-    s.text(24, 70, "Page 0 holds the game state; the stack grows down from 0FF.", 12, t["text2"])
+    s.text(24, 54, "Colour = the main-loop task or interrupt with the most instructions writing the nibble "
+                   "(measured from access traces).", 12, t["text2"])
+    s.text(24, 70, "Loops that sweep more than 48 nibbles (clears, block copies) are not counted; "
+                   "outlined = written only by them.", 12, t["text2"])
+    s.text(24, 86, "Page 0 holds the game state; the stack grows down from 0FF.", 12, t["text2"])
 
     def cat_of(addr):
         m = mem.get(addr)
         if not m:
             return None, False
-        writers = m[1]
+        if 0xE0 <= addr <= 0xFF and m[1]:
+            return "stack", True
+        writers = m[1] - bulk
         if not writers:
-            return "read_only", False
-        cats = set()
+            return ("cleared" if m[1] else "read_only"), False
+        votes = Counter()
         for pc in writers:
-            for a in attr.get(pc, ()):
-                cats.add(TASK2CAT.get(a, "shared"))
-        if not cats:
+            for c in {TASK2CAT.get(a, "shared") for a in attr.get(pc, ())}:
+                votes[c] += 1
+        top = votes.most_common(2)
+        if not top or (len(top) == 2 and top[0][1] == top[1][1]):
             return "shared", True
-        return (cats.pop() if len(cats) == 1 else "shared"), True
+        return top[0][0], True
 
     def draw_page(page, x0, y0, c):
         for i in range(256):
@@ -178,6 +197,15 @@ def fig_ram(mem, attr, theme):
             if cat is None:
                 fill, op = t["surface"], None
                 s.rect(x + 1, y + 1, c - 2, c - 2, fill, rx=2, stroke=t["grid"])
+                continue
+            if cat == "stack":
+                s.rect(x + 1, y + 1, c - 2, c - 2, t["neutral"], rx=2, title="%03X stack" % a)
+                continue
+            if cat == "cleared":
+                s.rect(x + 1, y + 1, c - 2, c - 2, t["surface"], rx=2, stroke=t["muted"],
+                       title="%03X written only by clears and block copies" % a)
+                if page == 0 and RAM_NAMES.get(a) and c >= 24:
+                    s.text(x + c / 2, y + c / 2 + 3, RAM_NAMES[a], 8, t["text2"], anchor="middle")
                 continue
             fill = t["neutral2"] if cat == "read_only" else colour(t, cat)
             name = RAM_NAMES.get(a) if page == 0 else None
@@ -206,10 +234,18 @@ def fig_ram(mem, attr, theme):
         cat, _ = cat_of(a)
         if cat:
             present[cat] += 1
-    for i, c in enumerate([c for c in CATS + ["library", "shared"] if present.get(c)] + ["read_only"]):
+    extra = {"read_only": "read, never written", "cleared": "only cleared or block-copied",
+             "shared": "no single main writer"}
+    extra["stack"] = "stack (return addresses, saved registers)"
+    for i, c in enumerate([c for c in CATS + ["library", "shared", "stack", "cleared", "read_only"] if present.get(c)]):
         y = ly + i * 20
-        s.rect(lx, y - 10, 12, 12, t["neutral2"] if c == "read_only" else colour(t, c), rx=2)
-        s.text(lx + 20, y, "%s (%d)" % ("read, never written" if c == "read_only" else LABEL[c], present[c]), 11)
+        if c == "stack":
+            s.rect(lx, y - 10, 12, 12, t["neutral"], rx=2)
+        elif c == "cleared":
+            s.rect(lx, y - 10, 12, 12, t["surface"], rx=2, stroke=t["muted"])
+        else:
+            s.rect(lx, y - 10, 12, 12, t["neutral2"] if c == "read_only" else colour(t, c), rx=2)
+        s.text(lx + 20, y, "%s (%d)" % (extra.get(c) or LABEL[c], present[c]), 11)
     return s
 
 
@@ -234,14 +270,15 @@ def thumb(s, vram, layout, x0, y0, px, t, on, off):
 
 
 MODE_NAMES = {0: "home", 1: "clock", 2: "STATUS", 3: "FEED", 4: "TRAIN", 5: "BATTLE", 6: "FLUSH",
-              7: "LIGHT", 8: "MEDIC", 9: "evolving", 0xA: "mode A", 0xB: "dying", 0xC: "grave"}
+              7: "LIGHT", 8: "MEDIC", 9: "evolving", 0xA: "pooping", 0xB: "dying", 0xC: "grave"}
 MODE_POS = {0: (520, 300), 1: (170, 300), 2: (100, 560), 3: (240, 560), 4: (380, 560), 5: (520, 560),
             6: (660, 560), 7: (800, 560), 8: (940, 560), 9: (870, 300), 0xA: (870, 130), 0xB: (520, 130),
             0xC: (170, 130)}
 # What causes each mode write, from the scenario that produced it (measured).
 EDGE_LABELS = {0x0252: "A", 0x0268: "A", 0x0303: "C", 0x025A: "B", 0x02C5: "B", 0x0537: "set done",
                0x05AB: "stage timer", 0x0586: "done", 0x05BE: "done", 0x07DC: "6 h injured",
-               0x07E9: "", 0x0CF3: "A+C", 0x0866: "idle"}
+               0x07E9: "", 0x0CF3: "A+C", 0x0866: "idle", 0x023D: "B", 0x02FD: "C",
+               0x088B: "poop due", 0x0CFA: "done", 0x026B: "A"}
 BW, BH, PX = 112, 86, 3
 
 
@@ -254,7 +291,22 @@ def _border(x, y, dx, dy):
     return x + dx * k, y + dy * k
 
 
+def fold_menu_wrap(trans):
+    """A on MEDIC is `add M(09), 1` at 0268 (8 -> 9) followed at once by `ld M(X), 0` at 026B
+    (9 -> 0). The 9 lasts two instructions and is not the evolving mode; fold the pair into a
+    single 8 -> 0 edge written at 026B."""
+    out = Counter()
+    for (m0, s0, m1, s1, pc), n in trans.items():
+        if pc == 0x0268 and m1 == 9:
+            continue
+        if pc == 0x026B and m0 == 9:
+            m0 = 8
+        out[(m0, s0, m1, s1, pc)] += n
+    return out
+
+
 def fig_modes(trans, frames, layout, theme, mode_names=None):
+    trans = fold_menu_wrap(trans)
     names = dict(MODE_NAMES)
     if mode_names:
         names.update(mode_names)

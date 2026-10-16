@@ -7,8 +7,9 @@ A long-form walk through the firmware of Bandai's original *Digital Monster* vir
 twelve-bit instructions, nibble-wide memory, a 32 × 16 dot LCD, three buttons and one metal
 prong. It covers the memory maps, the super-loop and its interrupts, how display RAM
 becomes pixels, the mode machine that is the whole user interface, timekeeping, injury and
-death, the dice, the link protocol, the exact battle odds, the factory test, and what
-happens to the old playground cheats.
+death, the dice, the link protocol, the exact battle odds (and the two slips in Bandai's
+comparison tree that skew them), the factory test, and what happens to the old playground
+cheats.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="article/figures/rom_atlas-dark.svg">
@@ -24,8 +25,8 @@ emulator, or checked mechanically), **read** (inferred from the code) or **docum
 | Path | |
 |---|---|
 | `article/` | the article, its appendices (every subroutine, RAM, I/O) and its figures |
-| `tools/static/` | control-flow walker, a disassembler with three fixes, an assembler for the lossless round trip, subsystem classifier, name tables |
-| `tools/emulation/` | headless driver for BrickEmuPy's E0C6200 core, a two-unit link cable with tamper hook, trace harness (coverage, memory access, task attribution, mode transitions, screens), the experiments, and a script that rebuilds every saved state from power-on |
+| `tools/static/` | control-flow walker, a disassembler with three fixes, the annotated-listing generator and an assembler that checks it reproduces the ROM byte for byte, the Ghidra map exporter, subsystem classifier, name tables |
+| `tools/emulation/` | headless driver for BrickEmuPy's E0C6200 core, a two-unit link cable with tamper hook, trace harness (coverage, memory access, task attribution, mode transitions, screens), the battle-threshold measurement, the experiments, and a script that rebuilds every saved state from power-on |
 | `tools/figures/` | the figure and appendix generators |
 | `ghidra/` | headless Ghidra 12 scripts for the E0C6S46 processor module: seed and export, then apply the recovered map |
 | `data/` | small derived data: the battle threshold table, the LCD layout, the Ver.1/Ver.2 alignment |
@@ -34,8 +35,10 @@ emulator, or checked mechanically), **read** (inferred from the code) or **docum
 ## No ROM here
 
 Bandai's firmware is not distributed. Bring your own dump; `roms/SHA256SUMS` lists the
-images this work was done against. Full machine listings reproduce the ROM byte for byte, so
-they are generated locally into `generated/` and never committed. The article quotes short
+images this work was done against. The full annotated listing (every subroutine with its
+name, confidence, callers and callees; every jump table; every named variable) reproduces the
+ROM byte for byte, so it is generated locally into `generated/` from your own dump and never
+committed; see [Reproducing this](article/README.md#reproducing-this). The article quotes short
 excerpts only.
 
 ## Thanks

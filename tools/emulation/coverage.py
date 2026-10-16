@@ -25,12 +25,15 @@ VECS = {0x102: "irq_timer", 0x104: "irq_04", 0x106: "irq_k0", 0x108: "irq_08",
         0x1102: "irq_timer", 0x1104: "irq_04", 0x1106: "irq_k0", 0x1108: "irq_08",
         0x110A: "irq_0A", 0x110C: "irq_prog_timer"}
 ATTR = {}
-_ctx = {"cur": "spine", "stack": []}
+# one context per CPU: the battle and comm-test scenarios interleave two linked units
+_CTX = {"gen": 0}
 
 
 def _attribute(self):
     pc = self._PC & 0x1FFF
-    c = _ctx
+    c = self.__dict__.get("_cov_ctx")
+    if c is None or c["gen"] != _CTX["gen"]:
+        c = self._cov_ctx = {"cur": "spine", "stack": [], "gen": _CTX["gen"]}
     if pc in VECS:
         c["stack"].append((c["cur"], self._SP))
         c["cur"] = VECS[pc]
@@ -95,8 +98,7 @@ ROM = sys.argv[3] if len(sys.argv) > 3 else os.environ.get("ROM", "roms/digimon_
 
 
 def _reset_ctx():
-    _ctx["cur"] = "spine"
-    _ctx["stack"] = []
+    _CTX["gen"] += 1
 
 
 def fresh():

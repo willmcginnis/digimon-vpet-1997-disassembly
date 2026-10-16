@@ -4,7 +4,7 @@
 
 > In 1997 every playground had a rule: kill your Digimon, then press **A** two hundred
 > times, **B** two hundred times and **C** twenty-five times, and a flaming Teddymon
-> comes back. Nobody's ever did. Twenty-nine years later the mask ROMs have been dumped,
+> comes back. Nobody ever saw it happen. Twenty-nine years later the mask ROMs have been dumped,
 > the CPU has an emulator, and the question can be put to the program itself.
 
 This is a long walk through that program: 8,192 twelve-bit instructions running on a
@@ -121,12 +121,12 @@ What each found, for Ver. 1:
 | Measure | Result |
 |---|---|
 | Words decoded and reassembled byte-identically | **8,192 / 8,192** (Ver. 1 and Ver. 2) — measured |
-| Words reached by the walker | **8,087 / 8,192**; 74 of the remainder are `nop7` filler — measured |
-| Words actually executed across the scenarios | **7,043 / 8,192** — measured |
+| Words reached by the walker | **8,092 / 8,192**; 74 of the other 100 are `nop7` filler — measured |
+| Words actually executed across the scenarios | **7,080 / 8,192** — measured |
 | Words Ghidra's auto-analysis covers on its own (vectors seeded) | **4,788 / 8,192** — measured |
-| Executed words Ghidra alone leaves undefined | **2,592**; with the recovered map applied, **0** — measured |
-| Executed words the walker missed before being seeded with the trace | **75** — measured |
-| Subroutines (`CALL`/`CALZ` targets plus interrupt vectors) | **281** — measured |
+| Executed words Ghidra alone leaves undefined | **2,618**; with the recovered map applied, **0** — measured |
+| Executed words the walker missed before being seeded with the trace | **69** — measured |
+| Subroutines (`CALL`/`CALZ` targets plus interrupt vectors, both banks' tables) | **288** — measured |
 
 The scenarios: power-on and reset; hatching and a baby's first hour; menus, feeding,
 training and the light; six hours of neglect; a night with the clock wound to bedtime; a
@@ -158,19 +158,28 @@ words the scenarios never reached fall back to a static assignment or grey.
 Three things are visible before reading a single instruction:
 
 - **Bank 0 is the program; bank 1 is mostly pictures.** Bitmap runs cover
-  {{GFX_B1}} of bank 1's 4,096 words and {{GFX_B0}} of bank 0's.
+  2,308 of bank 1's 4,096 words (56%) and 364 of bank 0's (9%).
 - **Page 0 is the shared library** (dark), and page 1 begins with the vectors and the main
   loop.
-- **Logic is clustered by task.** The key handling, the mode machine, the life clock and the
-  link code each occupy recognisable stretches of bank 0, because Bandai laid the code out
-  page by page and reached across pages with `PSET`.
+- **Logic is clustered by task.** The key handling (pages 2 and 3), the screens (4 to 7) and
+  the life clock (8 and 9) each occupy recognisable stretches of bank 0, because Bandai laid
+  the code out page by page and reached across pages with `PSET`. The link code on page B
+  shows mostly as shared: the battle screens call its routines directly as well as through
+  the link tasks.
 
 The RAM tells the same story from the other side (**measured** from access traces): each
-nibble coloured by the task whose code writes it.
+nibble coloured by the task with the most instructions that write it. A nibble a page-0
+helper writes counts for every task that called the helper, so the decimal counters, which
+are all bumped through `bcd_inc_mod60`, come out mixed. Even so, the layout shows through:
+the injury count and hours, the next-evolution time and the poop timer (`36`, `3A`,
+`4C`–`4F`, `80`–`82`) are the life task's, the battle
+state and result at `78`–`7D` the link and battle code's, the debounce at `A4`–`A6` the
+key scan's, and `B0`–`B5` a buffer of the screens. Nothing above `B5` is game state:
+`B6`–`DF` are only ever cleared, and the stack uses `E3`–`FF`.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/ram_map-dark.svg">
-  <img src="figures/ram_map-light.svg" alt="RAM map: page 0 labelled with the game's variables, coloured by writing task; pages 1 and 2 mostly shared scratch; the stack at the top of page 0.">
+  <img src="figures/ram_map-light.svg" alt="RAM map: page 0 labelled with the game's variables, coloured by the task that writes each most; pages 1 and 2 are working buffers for screens, animation and time; the stack at the top of page 0.">
 </picture>
 
 The named variables are listed in [Appendix B](appendix-ram.md).
@@ -451,7 +460,7 @@ it, and `task_mode_render` at `0x0410` is a switch on the mode (**read**):
 0421  pset 0x07 / jp z, 0700    ; 5: BATTLE
 ...
 0428  pset 0x05 / jp z, 0577    ; 9: evolving
-042A  pset 0x01 / jp 01DB       ; A and up: dying, grave
+042A  pset 0x01 / jp 01DB       ; A and up: pooping, dying, grave
 ```
 
 Every mode change the scenarios produced was recorded, with the instruction that wrote
@@ -459,14 +468,16 @@ it (**measured**):
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="figures/mode_machine-dark.svg">
-  <img src="figures/mode_machine-light.svg" alt="Mode machine: home in the centre; A steps through the seven menu modes 2 to 8; C or an idle timeout returns home; B opens the clock; the stage timer starts an evolution; six untreated hours lead to dying and the grave; A+C on the grave returns to home.">
+  <img src="figures/mode_machine-light.svg" alt="Mode machine: home in the centre; A steps through the seven menu modes 2 to 8; C or an idle timeout returns home; B opens the clock; the stage timer starts an evolution; a due poop plays mode A; six untreated hours lead to dying and the grave; A+C on the grave returns to home.">
 </picture>
 
 The design decision that makes the code small is visible in the bottom row: **the menu
 cursor is the mode itself.** Modes 2 to 8 are the seven icons in order — STATUS, FEED,
 TRAIN, BATTLE, FLUSH, LIGHT, MEDIC — and pressing A on any of them is a single
 `add M(X), 1` at `0x0268` (**measured**: every A press in every scenario took this path).
-Selecting with B moves into the mode's sub-steps. C goes home, and so does leaving a menu
+On MEDIC the same addition produces 9, the evolving mode, for exactly two instructions:
+`0x0269` compares with 9 and `0x026B` writes 0, so the cursor wraps to home (**measured**;
+the figure folds the pair into one arrow). Selecting with B moves into the mode's sub-steps. C goes home, and so does leaving a menu
 alone: `0x0866` returns any of modes 2–8 to home when an idle counter at `M(2D)`, cleared
 by every key at `0x0222`, reaches 60 (**read**; the transition **measured**).
 
@@ -488,7 +499,9 @@ The game keeps two separate times, both counted from the heartbeat flags in `M(0
 The wall clock drives the daily schedule. Once an hour `sleep_schedule_check` at `0x09A0`
 compares the hour against two per-species values, a bedtime `M(66)` and a waking hour
 `M(67)` — the per-Digimon "awake from … to …" hours that the community charts list
-(**documented**: humulos/NHOKO) — and raises the sleep or wake flags in `M(54)`.
+(**documented**: humulos/NHOKO) — and raises the sleep or wake flags in `M(54)`
+(**read**; **measured** running on the hour, and writing `M(54)`, in a scenario with the
+clock set to 7:58 PM and later to 6:58 AM).
 
 The stage timer drives growth. `M(4C–4F)` holds the stage time at which the next
 evolution is due. When the timer reaches it, `0x05AB` sets the mode to 9 and the
@@ -520,6 +533,25 @@ sequence began at 359 minutes):
 Mode B plays the dying animation; `0x07E9` then sets mode C, the grave, which stays until
 A and C are pressed together (§15).
 
+There are two ways into an injury, and both go through the same routine, `set_injured` at
+`0x0510` (**read**):
+
+- **After a battle**, the code at `0x01EC` adds a per-species chance to a second value and
+  compares the sum with the dice nibble `M(A3)`; if the dice fall below it, the Digimon is
+  injured.
+- **From neglect of the toilet.** `M(07)` counts the piles on screen. A timer at
+  `M(80–82)` makes the life clock set mode **A**, a short squatting animation (the scenarios
+  caught it twice: **measured**, entered at `0x088B` and left at `0x0CFA`), during which
+  `add_poop` at `0x08ED` adds a pile. FLUSH clears the count (`0x04D7`). The count stops at
+  eight, and the eighth pile calls `set_injured`. If a poop falls due while the clock or a
+  menu is on screen, the pile is added without the animation.
+
+`set_injured` sets the bit, restarts the six-hour clock at `M(38–3A)` if the Digimon was
+not already injured, and in every case adds one to a two-digit decimal count at
+`M(36–37)`. When that count reaches 20, `0x0521` calls `enter_death_sequence` directly:
+a second way to die, by accumulated injuries rather than one untreated injury (**read**;
+not exercised here).
+
 The finer rules of care — how protein moves energy, enhancement and the chance of injury,
 how care mistakes subtract — were worked out on real hardware by the DMComm project and
 match the variables named here (**documented**: DMComm, *Original V-Pet*).
@@ -548,9 +580,16 @@ Every random decision in the game draws on four nibbles at `A0`–`A3`, advanced
 0E86  ret
 ```
 
-It is not a random number generator in any statistical sense. It is two counters, one
-stepping by 73 in decimal and one by `0x73` in binary, read at whatever moment a decision
-is needed. Its unpredictability comes entirely from the number of main-loop passes that
+It is not a random number generator in any statistical sense. It is two chained counters.
+The decimal pair `A1:A0` steps by 73. The binary pair `A3:A2` steps by `0x73`, plus the
+carry out of the decimal add, because nothing clears the carry flag between the two
+(**measured** over 171 consecutive passes: the decimal step was 73 every time; the binary
+step was `0x74` on exactly the 125 passes where the decimal counter wrapped past 99, and
+`0x73` otherwise). Every 100 passes the decimal counter returns to its start and the
+binary counter has moved by 53, which shares no factor with 256, so the pair repeats only
+after **25,600 passes** — about an hour and three quarters at the four passes a second an
+idle unit makes (**measured**: 172 passes in 42 s). The battle roll reads just `M(A3)`,
+the top nibble of the binary counter. Its unpredictability comes entirely from the number of main-loop passes that
 happen between decisions, which depends on button presses, animation and the link. That is
 why a sweep of battle start times (§13) finds the outcome flipping with a few hundred
 milliseconds' difference in when B is pressed, and why no fixed button sequence can steer
@@ -630,6 +669,54 @@ Three things fall out of the table.
   the mechanism behind an old forum tip that "it might matter which device you press the
   button on".
 
+### Two slips in the comparison tree
+
+The asymmetry is worth reading closely, because most of it does not come from the shape of
+the routine. It comes from two places where the code compares the wrong thing (**read**;
+the consequences **measured**).
+
+The routine's idiom is *compare, load, branch*. A `CP` sets the flags, an `LD A, i` loads a
+candidate threshold (loads do not touch the flags on this core), and a conditional jump
+keeps that threshold or moves on:
+
+```asm
+0D81  cp B, 0x5           ; opponent a child?
+0D82  ld A, 0x8           ;   candidate threshold 8
+0D83  jp c, 0DD3          ;   yes: keep it
+0D84  cp A, 0xB           ; opponent Numemon (slot B)?  -- but A now holds 8
+0D85  ld A, 0x9
+0D86  jp z, 0DD3          ;   never taken
+```
+
+The routine opens with `cp A, 0xB` on the *initiator's* slot, which is a real test: a
+Numemon initiating gets a branch of its own at `0DC6`. Five more `cp A, 0xB` follow, one on
+each branch, each placed where the question being asked is about the *opponent* in
+register B — and each comes right after `A` has been overwritten with a threshold constant.
+They compare a constant with `0xB` and can never succeed. `cp A, 0xB` is opcode `DCB`;
+`cp B, 0xB` is `DDB`. The two differ by one bit.
+
+The second slip is in the adult and Perfect branches. Each ends in `sub A, B` followed by
+"equal → threshold 8", the only place outside the child branch where an even fight is
+possible. Here too `A` holds a constant by the time the subtraction runs (`0xE`, `0xD` or
+`1`), so the equality never happens.
+
+The effect on fights between two of the same Digimon, from the measured table:
+
+| Same species, either unit initiating | Threshold | Initiator wins |
+|---|---:|---:|
+| child against the same child | 8 | 8 / 16 |
+| adult against the same adult | 7 | 9 / 16 |
+| Perfect against the same Perfect | 11 | 5 / 16 |
+| Numemon against Numemon | 13 | 3 / 16 |
+
+As a what-if, not a claim about the device: patching the five `DCB`s to `DDB` and executing
+the routine again (`tools/emulation/threshold.py --patch`; **measured** on the patched ROM)
+makes Numemon against Numemon an even 8, and turns 8 more of the 66 pairings of different
+Digimon into complementary pairs (19 → 27). Whether Bandai meant any of this is not
+something the ROM can say. What it does say is that the table players were fighting was
+not the table the comparison tree is shaped to compute, and that both versions shipped
+with it: the routine is identical in Ver. 2.
+
 ### What tampering does (measured)
 
 The responder trusts packet 2 without checking it against anything:
@@ -704,9 +791,13 @@ their 8-bit step so that shifted code still matches (**measured**):
 | bank 1 (species graphics and animation) | 1,436 / 4,096 — **35%** |
 | whole ROM | 4,812 / 8,192 — 59%, in 755 runs, the longest 246 words |
 
-The battle outcome routine is the cleanest example: identical instruction for instruction,
-four words later in Ver. 2 (`0x0D7E`), and executing it yields the same threshold table
-(§13). The two ROMs are one program with two sets of monsters.
+The battle outcome routine is the cleanest example. Four words later in Ver. 2 (`0x0D7E`),
+its comparison tree is identical instruction for instruction, both slips of §13 included,
+and executing it yields the same threshold table (**measured**). Exactly one word of the
+routine differs, after the roll: where Ver. 1 writes `0` beside the result and sends `0`
+in the second nibble of packet 2 (`0DE5 ldpx M(X), 0x0`), Ver. 2 loads whatever `M(78)`
+holds and sends that instead (`0DE9 ldpx A, M(X)`) (**read**). The two ROMs are one
+program with two sets of monsters.
 
 
 ---
@@ -718,14 +809,14 @@ four words later in Ver. 2 (`0x0D7E`), and executing it yields the same threshol
 The community module (Veryyes/E0C6S46-Ghidra-Processor) compiles cleanly with Ghidra 12's
 SLEIGH compiler and decodes every instruction correctly. Seeded with the reset and
 interrupt vectors, auto-analysis of Ver. 1 covers 4,788 of 8,192 words — 3,603 in bank 0
-but only 1,185 in bank 1 — and leaves 2,592 *executed* words undefined (**measured**).
+but only 1,185 in bank 1 — and leaves 2,618 *executed* words undefined (**measured**).
 
 The cause is **`JPBA`**, a computed jump to `B:A` on the current or `PSET` page. Ghidra
 cannot know B and A, so everything reached only through the 25 jump tables stays dark:
 the per-species table at `0x1200` (and with it most of bank 1), the mode handlers, the
 battle state machine. `ghidra/ApplyMap.java` adds the walker's recovered targets as
-computed-jump references and disassembles the rest; afterwards Ghidra covers 8,093 words
-and no executed word is undefined (**measured**).
+computed-jump references, names the subroutines, labels and variables, and disassembles the
+rest; afterwards Ghidra covers 8,100 words and no executed word is undefined (**measured**).
 
 Two smaller things are worth knowing if you use the module on other ROMs:
 
@@ -740,10 +831,12 @@ Two smaller things are worth knowing if you use the module on other ROMs:
   ROM words must multiply by the addressable unit size (the scripts here do; an earlier
   draft of them did not, and measured nonsense).
 
-Of Ghidra's 313 functions, 186 match the walker's subroutines; 121 of the other 127 are
-cross-page `JP` targets that Ghidra promotes to functions. That is a different definition
-of "function", not a disagreement about code; this article counts subroutines as
-`CALL`/`CALZ` targets plus interrupt vectors (281).
+Of the 313 functions Ghidra finds on its own, 186 match the walker's subroutines; 121 of
+the other 127 are `JP` targets that Ghidra promotes to functions (61 of them reached by a
+`PSET`-prefixed jump from another page), and the last six are jump-table bases and the
+entry point. That is a different definition of "function", not a disagreement about code;
+this article counts subroutines as `CALL`/`CALZ` targets plus interrupt vectors (288).
+With the map applied, all 288 are functions in the Ghidra project too.
 
 ### BrickEmuPy's disassembler
 
@@ -781,29 +874,66 @@ of the images used is in `roms/SHA256SUMS`.
 
 ```sh
 git clone https://github.com/azya52/BrickEmuPy
-export BRICK=$PWD/BrickEmuPy ROM=roms/digimon_v1.bin
+export BRICK=$PWD/BrickEmuPy ROM=$PWD/roms/digimon_v1.bin G=$PWD/generated
+mkdir -p $G/v1 $G/cov
 
-# static map and lossless round trip
-PYTHONPATH=tools/static python3 tools/static/walker.py $ROM generated/v1 $BRICK
-#   (writes generated/v1/static.json; listing and reassembly checks in tools/static)
-
-# emulation scenarios: coverage, memory traces, task attribution, mode transitions
+# 1. saved states and emulation scenarios (coverage, memory traces with the PC of
+#    every access, task attribution, mode transitions, screens)
 cd tools/emulation
-PYTHONPATH=$BRICK python3 coverage.py evolve ../../generated/cov/evolve.json ../../$ROM
+PYTHONPATH=$BRICK python3 make_states.py
+for s in boot baby_life child_life night battle death testmode evolve; do
+  PYTHONPATH=$BRICK python3 coverage.py $s $G/cov/$s.json $ROM
+done
+python3 -c "import json,glob; print(json.dumps(sorted({p for f in glob.glob('$G/cov/*.json') \
+  for p in json.load(open(f))['pcs']})))" > $G/executed.json
+PYTHONPATH=$BRICK python3 threshold.py $ROM ../../data/battle_threshold_v1.json 0D7A
+cd ../..
 
-# figures
+# 2. static map, seeded with the executed PCs; annotated listing; lossless round trip
+cd tools/static
+SEED_PCS=$G/executed.json python3 walker.py $ROM $G/v1 $BRICK
+python3 classify.py $G/v1/static.json $G/executed.json $G/v1/classes.json
+python3 listing.py $G/v1/static.json names_v1.py $G/v1/digimon_v1.asm
+python3 asm.py $G/v1/digimon_v1.asm $G/v1/roundtrip.bin $BRICK && cmp $G/v1/roundtrip.bin $ROM
+python3 export_ghidra_map.py $G/v1/static.json names_v1.py $G/v1/ghidra_map.tsv
+cd ../..
+
+# 3. figures and appendices
 python3 tools/figures/figs_static.py article/figures
 python3 tools/figures/figs_battle.py data/battle_threshold_v1.json article/figures
+python3 tools/figures/figs_versions.py data/v1v2_align.json article/figures
+python3 tools/figures/figs_data.py $G/v1/static.json $G/v1/classes.json $G/cov \
+  data/lcd_layout.json article/figures
+python3 tools/figures/gen_appendices.py $G/v1/static.json $G/cov tools/static/names_v1.py article
 ```
 
+`generated/` is ignored by git: the listing in it is the ROM in another form.
+
 Ghidra: install the E0C6S46 module as a user extension, compile its `.slaspec` with
-`support/sleigh`, import the ROM with `-processor E0C6S46:2:default -loader BinaryLoader`,
-and run `ghidra/SeedAndExport.java`, then `ghidra/ApplyMap.java` with the map the walker
-produces.
+`support/sleigh`, then
+
+```sh
+analyzeHeadless PROJ digimon -import $ROM -processor E0C6S46:2:default \
+  -loader BinaryLoader -loader-baseAddr 0 -scriptPath ghidra \
+  -postScript SeedAndExport.java OUT
+analyzeHeadless PROJ digimon -process digimon_v1.bin -noanalysis -scriptPath ghidra \
+  -postScript ApplyMap.java $G/v1/ghidra_map.tsv -postScript SeedAndExport.java OUT_MAPPED
+```
 
 
 ---
 
 ## Appendices
 
-<!-- APPENDICES -->
+- **[Appendix A — every subroutine](appendix-functions.md):** entry, name and confidence,
+  size, callers, whether it ran, which task ran it, and the I/O registers it touched.
+- **[Appendix B — RAM variables](appendix-ram.md):** the named nibbles of page 0 with
+  their measured readers and writers.
+- **[Appendix C — I/O registers](appendix-io.md):** the registers the firmware touches,
+  and which tasks touch them.
+- **[`data/battle_threshold_v1.json`](../data/battle_threshold_v1.json):** the full
+  threshold table behind §13, every own-slot × opponent-slot pair, plus the enhancement
+  sweep; [`battle_threshold_v1_whatif_cpB.json`](../data/battle_threshold_v1_whatif_cpB.json)
+  is the same table from the patched ROM of "Two slips in the comparison tree".
+
+
