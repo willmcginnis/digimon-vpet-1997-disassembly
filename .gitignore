@@ -1,0 +1,8 @@
+# Bring your own dump: Bandai's firmware is not distributed here.
+roms/*.bin
+*.bin
+# Full machine listings reproduce the ROM byte-for-byte; generate them locally.
+generated/
+*.asm
+*.pkl
+__pycache__/

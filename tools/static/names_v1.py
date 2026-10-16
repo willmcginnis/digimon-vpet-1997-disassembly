@@ -1,0 +1,136 @@
+"""Curated names for the Digimon V-Pet Ver.1 (1997) ROM.
+
+confidence:
+  measured - behaviour observed in the emulator (yesterday's probes or today's traces)
+  read     - inferred from reading the disassembly; not separately exercised
+Each entry: address -> (name, confidence, note)
+"""
+
+FUNCS = {
+    # ---- vectors and spine -------------------------------------------------
+    0x0100: ("reset_vector", "read", "PSET 01 / JP 010E"),
+    0x0102: ("irq_timer_vector", "read", "-> 17D6; interrupt priority 2 (clock timer)"),
+    0x0106: ("irq_k0_vector", "read", "-> 1EDE; key-input interrupt wakes the CPU from HALT"),
+    0x010C: ("irq_prog_timer_vector", "read", "-> 1CEB; programmable timer (tone / link bit timing)"),
+    0x010E: ("reset_entry", "measured", "SP=0, clock slow, clear RAM pages 0/1/2/E, A held -> test mode"),
+    0x0132: ("main_loop", "measured", "super-loop: 11 tasks per pass, then HALT until the next interrupt"),
+    0x016E: ("test_mode_entry", "measured", "A held at reset: fill display RAM with 1s, run the factory test"),
+    0x09F4: ("factory_test", "measured", "segment / checkerboard / comm self-test screens"),
+    # ---- page-0 CALZ library ------------------------------------------------
+    0x0000: ("lcd_on_and_arm_timeout", "read", "F71 |= 1; M(25) = D"),
+    0x0007: ("cpu_clock_slow", "read", "CTRL_OSC (F70) back to the 32 kHz clock before HALT"),
+    0x0010: ("cpu_clock_fast", "read", "F70: start OSC3, wait, switch CPU to the fast clock"),
+    0x0022: ("clear_ram_pages", "measured", "A = first page, B = -(count): zero whole 256-nibble pages"),
+    0x002A: ("bcd_inc_mod60", "read", "two-digit BCD increment that wraps 59 -> 00 (minutes)"),
+    0x0033: ("bcd_dec_mod60", "read", "two-digit BCD decrement, shares the 0031 tail"),
+    0x0039: ("hour12_inc", "read", "1..12 hour counter"),
+    0x0043: ("clear_page2", "read", "zero RAM page 2 (0x200-0x27F)"),
+    0x004C: ("clear_page1", "read", "zero RAM page 1 (0x100-0x17F)"),
+    0x0052: ("update_status_overlay", "read", "pick M(0C) from status bits M(05): 5 = injured? A, C"),
+    0x0064: ("frame_tick", "read", "consumes the M(00).0 tick flag, steps the animation counter M(01)"),
+    0x0078: ("clear_sound_flags", "read", "M(0D) &= 3, then zero 3 nibbles at M(29)"),
+    0x007C: ("bcd_inc_sat99", "read", "two-digit BCD increment that saturates at 99"),
+    0x0087: ("set_xp_io", "read", "XP = F (I/O page)"),
+    0x0089: ("set_xyp_ram0", "read", "XP = YP = 0"),
+    0x008D: ("set_xp_ram1", "read", "XP = 1"),
+    0x008F: ("set_xp_ram2", "read", "XP = 2"),
+    0x009C: ("inc8", "read", "8-bit increment of M(X),M(X+1)"),
+    0x00A0: ("test_status_bit2", "read", "B = M(05); fan B,4"),
+    0x00A8: ("prog_timer_start", "read", "load RD (F26/27), enable PT interrupt, start PT"),
+    0x00C2: ("prog_timer_stop", "read", "stop PT, disable its interrupt, R4 |= C (buzzer off)"),
+    0x00DE: ("inc_sat_F", "read", "nibble increment saturating at F"),
+    0x00E2: ("dec8", "read", "8-bit decrement"),
+    0x00E7: ("is_battle_ready_screen", "read", "Z set when mode 5 and submode 2"),
+    0x00ED: ("lcd_on_buzzer_idle", "read", ""),
+    0x00F8: ("dispatch_page_0F", "read", "jump table at 0x0F00 indexed by M(Y)"),
+    # ---- main-loop tasks ---------------------------------------------------
+    0x01CA: ("task_mark_awake", "read", "M(F76) = 1: restart the clock timer"),
+    0x0900: ("task_timekeeping", "read", "per-tick: LCD timeout, minute/hour counters, sleep schedule"),
+    0x07BF: ("task_key_scan", "measured", "debounce K0 (A/B/C) into the key-event nibble M(02)"),
+    0x0200: ("task_key_dispatch", "measured", "route M(02) by mode M(09); death screen ignores keys"),
+    0x0800: ("task_life_clock", "read", "hunger/strength timers, poop, calls, evolution timing"),
+    0x0A5D: ("task_animation", "read", "per-frame sprite animation by mode"),
+    0x0B06: ("task_link_rx", "measured", "listen on the prong (P2) and receive a 16-bit word"),
+    0x0B5B: ("task_link_tx", "measured", "transmit a queued 16-bit word on the prong"),
+    0x0410: ("task_mode_render", "read", "state machine: switch on mode M(09) to each screen's handler"),
+    0x0A00: ("task_sound", "read", "sound sequencer flags in M(17)"),
+    0x0E7B: ("rng_step", "measured", "A1A0 += 73 (BCD), A3A2 += 0x73 (binary); once per main-loop pass"),
+    # ---- key handling --------------------------------------------------------
+    0x0EC9: ("key_handler_mode_dispatch", "measured", "per-mode key handling; grave screen falls through"),
+    0x0CEF: ("grave_key_AC_new_egg", "measured", "A+C on the death screen -> mode 0 (new egg)"),
+    # ---- life / death -----------------------------------------------------
+    0x07D7: ("enter_death_sequence", "measured", "mode B (dying animation) then C (grave)"),
+    0x07E7: ("set_mode_C_grave", "read", ""),
+    0x0510: ("care_check_injury", "read", "injury bookkeeping; 6 h untreated -> 07D7"),
+    0x0577: ("evolution_step", "measured", "fires when the clock reaches the next-evolution time M(4C-4F)"),
+    0x0596: ("evolution_check", "read", "compare clock M(48-4B) with M(4C-4F)"),
+    0x0D10: ("evolution_pick_next", "read", "choose the next slot from care mistakes / training / battles"),
+    # ---- link and battle ---------------------------------------------------
+    0x0B00: ("link_queue_A5", "measured", "comm self-test: send 5AA5"),
+    0x0B03: ("link_queue_5A", "measured", "comm self-test: send A55A"),
+    0x0BEF: ("link_wait_edge", "read", "poll the prong for activity"),
+    0x0D7A: ("battle_outcome_roll", "measured", "INITIATOR ONLY: threshold from slot/enhancement, win iff M(A3) >= threshold"),
+    0x0E87: ("battle_rx_dispatch", "measured", "battle packet state machine (both roles)"),
+    0x0FB9: ("battle_build_packet1", "read", "slot and enhancement into the TX buffer M(10-13)"),
+    # ---- graphics -------------------------------------------------------------
+    0x0976: ("blit_sprite_8x8", "read", "copy sprite nibbles into display RAM via Y/X"),
+    0x0990: ("blit_column", "read", ""),
+    0x0E57: ("draw_digit", "read", ""),
+    0x0E66: ("swap_display_buffers", "read", "exchange two display halves (left/right facing)"),
+    0x0E73: ("draw_heart_icon", "read", "RETD table: heart glyph"),
+    0x0563: ("draw_meter", "read", "draw an n-segment meter (hearts / energy)"),
+    0x1230: ("species_gfx_dispatch", "read", "32-entry pset/jp table at 0x1200 indexed by slot M(0B)"),
+}
+
+LABELS = {
+    0x0EB0: ("battle_responder_outcome", "measured", "responder: outcome = complement of the initiator's"),
+    0x0DDF: ("battle_roll_compare", "measured", "cp M(A3), threshold -> B = 1 win / 2 lose"),
+    0x0243: ("key_mode_gate", "measured", "mode >= 9 (dying/grave): ignore the key"),
+    0x08D3: ("injury_hour_tick", "measured", "untreated-injury hours; 6 -> death"),
+    0x1200: ("species_gfx_table", "read", "16 pset/jp pairs, one per slot"),
+}
+
+RAM = {
+    0x00: ("tick_flags", "read", "bit0 animation tick, bit1 minute tick, bit2 second tick"),
+    0x01: ("anim_counter", "read", ""),
+    0x02: ("key_event", "measured", "debounced key bits (A=4, B=2, C=1)"),
+    0x03: ("key_state", "read", ""),
+    0x05: ("status_flags", "measured", "bit0 injured, bit1 sick, bit2 ?"),
+    0x06: ("ui_flags", "read", ""),
+    0x09: ("mode", "measured", "0 idle/pet, 1 clock set, 2 menu, 5 battle, 9 evolving, B dying, C grave"),
+    0x0A: ("submode", "measured", "per-mode step; battle uses 0-8"),
+    0x0B: ("species_slot", "measured", "growth-chart slot (0 egg, 1 baby I, 2 baby II, 3.. child..; F dead)"),
+    0x0C: ("overlay_icon", "read", ""),
+    0x0D: ("sound_flags", "read", ""),
+    0x10: ("link_tx_word", "measured", "4 nibbles: 16-bit word to send (low nibble first) + complement"),
+    0x15: ("menu_index", "measured", ""),
+    0x17: ("sound_seq_flags", "read", ""),
+    0x36: ("injury_minutes", "measured", "2-digit BCD minutes since injury"),
+    0x38: ("injury_hours", "measured", "6 -> death"),
+    0x48: ("clock_minutes", "measured", "BCD minutes (units, tens)"),
+    0x4A: ("clock_hours", "measured", "hours (2 nibbles)"),
+    0x4C: ("next_evolution_time", "measured", "BCD minute/hour the next evolution fires"),
+    0x75: ("battles_since_injury", "read", ""),
+    0x76: ("life_flags", "read", "bit1 evolution pending, bit3 ?"),
+    0x78: ("battle_state", "measured", ""),
+    0x79: ("battle_result", "measured", "1 win, 2 lose (this device)"),
+    0x7B: ("own_enhancement", "measured", "power bonus sent in packet 1"),
+    0x7E: ("opp_slot", "measured", "from the opponent's packet 1"),
+    0x7F: ("opp_enhancement", "measured", ""),
+    0x8C: ("energy", "measured", "battle energy (decrements per battle)"),
+    0xA0: ("rng", "measured", "4 nibbles; A1A0 BCD +73, A3A2 binary +0x73 per loop pass"),
+}
+
+IO = {
+    0xF00: "IT (timer int factors)", 0xF01: "ISW (stopwatch int)", 0xF02: "IPT (prog-timer int)",
+    0xF03: "ISIO (serial int)", 0xF04: "IK0 (K0 int)", 0xF05: "IK1 (K1 int)",
+    0xF10: "EIT", 0xF11: "EISW", 0xF12: "EIPT", 0xF13: "EISIO", 0xF14: "EIK0", 0xF15: "EIK1",
+    0xF20: "TM3-0", 0xF21: "TM7-4", 0xF22: "SWL", 0xF23: "SWH", 0xF24: "PT3-0", 0xF25: "PT7-4",
+    0xF26: "RD3-0", 0xF27: "RD7-4", 0xF30: "SD3-0", 0xF31: "SD7-4",
+    0xF40: "K0 (buttons: A=4 B=2 C=1, active low)", 0xF41: "DFK0", 0xF42: "K1",
+    0xF50: "R0", 0xF51: "R1", 0xF52: "R2", 0xF53: "R3", 0xF54: "R4 (buzzer)",
+    0xF60: "P0", 0xF61: "P1", 0xF62: "P2 (link prong, bit0)", 0xF63: "P3",
+    0xF70: "CTRL_OSC", 0xF71: "CTRL_LCD", 0xF72: "LC (contrast)", 0xF73: "SVD (battery)",
+    0xF74: "BZ1", 0xF75: "BZ2", 0xF76: "TM reset", 0xF77: "SW ctrl", 0xF78: "PT ctrl", 0xF79: "PTC",
+    0xF7D: "IOC", 0xF7E: "PUP",
+}
