@@ -126,9 +126,9 @@ What each found, for Ver. 1:
 |---|---|
 | Words decoded and reassembled byte-identically | **8,192 / 8,192** (Ver. 1 and Ver. 2) — measured |
 | Words reached by the walker | **8,092 / 8,192**; 74 of the other 100 are `nop7` filler — measured |
-| Words actually executed across the scenarios | **7,080 / 8,192** — measured |
+| Words actually executed across the scenarios | **7,071 / 8,192** — measured |
 | Words Ghidra's auto-analysis covers on its own (both vector tables seeded) | **4,799 / 8,192** — measured |
-| Executed words Ghidra alone leaves undefined | **2,612**; with the recovered map applied, **0** — measured |
+| Executed words Ghidra alone leaves undefined | **2,602**; with the recovered map applied, **0** — measured |
 | Executed words the walker missed before being seeded with the trace | **69** — measured |
 | Subroutines (`CALL`/`CALZ` targets plus interrupt vectors, both banks' tables) | **288** — measured |
 
@@ -547,7 +547,7 @@ There are two ways into an injury, and both go through the same routine, `set_in
   injured.
 - **From neglect of the toilet.** `M(07)` counts the piles on screen. A timer at
   `M(80–82)` makes the life clock set mode **A**, a short squatting animation (the scenarios
-  caught it twice: **measured**, entered at `0x088B` and left at `0x0CFA`), during which
+  caught it three times: **measured**, entered at `0x088B` and left at `0x0CFA`), during which
   `add_poop` at `0x08ED` adds a pile. FLUSH clears the count (`0x04D7`). The count stops at
   eight, and the eighth pile calls `set_injured`. If a poop falls due while the clock or a
   menu is on screen, the pile is added without the animation.
@@ -634,7 +634,7 @@ aim them.
 Two V-Pets fight through a single metal prong: one open-drain line, pulled high when
 idle, that either unit can pull low. The firmware drives and samples it through bit 0 of
 port `P2` (`F62`), polled from the main loop by `task_link_rx` at `0x0B06` and
-`task_link_tx` at `0x0B5B` (**measured**: the only code that touches `F62`).
+`task_link_tx` at `0x0B5B` (**measured**: every instruction that touches `F62` lies in these routines on page B; the battle screens and the factory test reach the line only by calling into them).
 
 A word is sixteen bits. Each bit is a high/low pair whose split carries the value
 (timings **documented** from BrickEmuPy's `CON_DGM` peripheral model; bit order
@@ -996,7 +996,7 @@ that observation. The guide recorded the effect from the device; the code shows 
 The community module (Veryyes/E0C6S46-Ghidra-Processor) compiles cleanly with Ghidra 12's
 SLEIGH compiler and decodes every instruction correctly. Seeded with the reset and
 interrupt vectors of both banks' tables, auto-analysis of Ver. 1 covers 4,799 of 8,192
-words — 3,603 in bank 0 but only 1,196 in bank 1 — and leaves 2,612 *executed* words
+words — 3,603 in bank 0 but only 1,196 in bank 1 — and leaves 2,602 *executed* words
 undefined (**measured**; Ver. 2: 4,844 words, and the full comparison for both versions
 is in [`ghidra/README.md`](../ghidra/README.md)).
 

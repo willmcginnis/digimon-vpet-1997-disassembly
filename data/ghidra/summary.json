@@ -2,7 +2,7 @@
  "v1": {
   "walker_reached": 8092,
   "walker_subroutines": 288,
-  "executed": 7080,
+  "executed": 7071,
   "alone_bank0": {
    "words": 4788,
    "bank0": 3603,
@@ -10,7 +10,7 @@
    "reached_undefined": 3304,
    "functions": 313,
    "functions_matching_walker": 186,
-   "executed_undefined": 2618
+   "executed_undefined": 2608
   },
   "alone_both": {
    "words": 4799,
@@ -19,7 +19,7 @@
    "reached_undefined": 3293,
    "functions": 320,
    "functions_matching_walker": 193,
-   "executed_undefined": 2612
+   "executed_undefined": 2602
   },
   "mapped": {
    "words": 8098,

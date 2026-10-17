@@ -55,7 +55,7 @@ versions; `alone_bank0`, `alone_both` and `mapped` are the three runs).
 | … with only the bank-0 table seeded | 4,788 | 4,833 |
 | Words the walker reaches | 8,092 | 8,045 |
 | Walker-reached words Ghidra alone leaves undefined | 3,293 | 3,201 |
-| Executed words Ghidra alone leaves undefined | 2,612 of 7,080 | (no Ver. 2 traces) |
+| Executed words Ghidra alone leaves undefined | 2,602 of 7,071 | (no Ver. 2 traces) |
 | Words decoded with the map applied | 8,098 | 8,045 |
 | Walker-reached words still undefined with the map | 0 | 0 |
 | Functions Ghidra finds on its own / matching walker subroutines | 320 / 193 | 334 / 197 |
