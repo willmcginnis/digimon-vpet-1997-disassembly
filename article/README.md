@@ -808,7 +808,10 @@ its comparison tree is identical instruction for instruction, both slips of §13
 and executing it yields the same threshold table (**measured**). Exactly one word of the
 routine differs, after the roll: where Ver. 1 writes `0` beside the result and sends `0`
 in the second nibble of packet 2 (`0DE5 ldpx M(X), 0x0`), Ver. 2 loads whatever `M(78)`
-holds and sends that instead (`0DE9 ldpx A, M(X)`) (**read**). The two ROMs are one
+holds and sends that instead (`0DE9 ldpx A, M(X)`) (**read**). DMComm documents that
+nibble as the device's version: 0 for Ver. 1, 1 for Ver. 2, and a Ver. 1 going second
+echoes its opponent's. A constant 0 in Ver. 1 and a stored value in Ver. 2 fit that
+description. The two ROMs are one
 program with two sets of monsters.
 
 Ver. 2 went through the same static pipeline (**measured**):
@@ -847,9 +850,20 @@ Ver. 1 chart deliberately changes the rules. Compared with this ROM, it uses 3 c
 mistakes rather than 4 as the branch point and lowers the training thresholds (16 rather
 than 32 for Greymon, for example). It drops the sleep-disturbance conditions, has
 Botamon evolve after 10 minutes rather than about an hour, and replaces the Perfect roll
-with "15 battles, 12–15 victories". Its bedtimes are one to three hours later. None of
-that is a disagreement with the 1997 code. It is a different game, and the 1997 pages
-are the ones to check.
+with "15 battles, 12–15 victories". Its bedtimes are one to three hours later. The device itself is documented as a
+different game too. Its battles are fought with power, attributes and an attack-order
+minigame. Every Digimon wakes at 7 AM, and the evolution timer pauses during sleep
+(humulos, *Digimon Original manual*; **documented**). A call goes out after 10 minutes,
+not 20, and two hearts emptying together count as two care mistakes (Wikimon;
+**documented**). This firmware has the 20-minute call and counts one care mistake per call.
+What the re-release keeps from 1997 is the link protocol. Its OTHER battle mode "will use
+a predetermined slot from the original Digital Monster series", mostly by stage, and
+ignores power and attributes. humulos's 1997 battle page notes that when a modern device
+initiates, it is the modern device that does the calculation. So the chart below
+describes a fight only when a 1997 unit presses first. No dump of the re-release's
+program turned up, so how much code, if any, it shares with this ROM is unknown. Its
+documented behaviour differs in all the ways above, which is why the 1997 pages are the
+ones to check.
 
 ### Where the guide and the firmware agree
 
