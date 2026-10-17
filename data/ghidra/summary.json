@@ -1,0 +1,62 @@
+{
+ "v1": {
+  "walker_reached": 8092,
+  "walker_subroutines": 288,
+  "executed": 7080,
+  "alone_bank0": {
+   "words": 4788,
+   "bank0": 3603,
+   "bank1": 1185,
+   "reached_undefined": 3304,
+   "functions": 313,
+   "functions_matching_walker": 186,
+   "executed_undefined": 2618
+  },
+  "alone_both": {
+   "words": 4799,
+   "bank0": 3603,
+   "bank1": 1196,
+   "reached_undefined": 3293,
+   "functions": 320,
+   "functions_matching_walker": 193,
+   "executed_undefined": 2612
+  },
+  "mapped": {
+   "words": 8098,
+   "bank0": 4059,
+   "bank1": 4039,
+   "reached_undefined": 0,
+   "functions": 450,
+   "functions_matching_walker": 288,
+   "executed_undefined": 0
+  }
+ },
+ "v2": {
+  "walker_reached": 8045,
+  "walker_subroutines": 267,
+  "alone_bank0": {
+   "words": 4833,
+   "bank0": 3597,
+   "bank1": 1236,
+   "reached_undefined": 3212,
+   "functions": 326,
+   "functions_matching_walker": 190
+  },
+  "alone_both": {
+   "words": 4844,
+   "bank0": 3597,
+   "bank1": 1247,
+   "reached_undefined": 3201,
+   "functions": 334,
+   "functions_matching_walker": 197
+  },
+  "mapped": {
+   "words": 8045,
+   "bank0": 4055,
+   "bank1": 3990,
+   "reached_undefined": 0,
+   "functions": 430,
+   "functions_matching_walker": 267
+  }
+ }
+}

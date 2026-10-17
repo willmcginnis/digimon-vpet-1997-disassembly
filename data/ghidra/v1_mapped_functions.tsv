@@ -1,0 +1,451 @@
+entry	name	body_words	instructions	callers	callees
+rom:0000	lcd_on_and_arm_timeout	7	7		rom:0087,rom:0089,
+rom:0007	cpu_clock_slow	9	9	rom:0b60,rom:0b06,rom:0160,rom:01c0,rom:0110,	rom:0087,rom:0089,
+rom:0010	cpu_clock_fast	18	18	rom:0b55,rom:0b06,rom:0110,	rom:0087,rom:0089,
+rom:0022	clear_ram_blocks	8	8	rom:0110,	
+rom:002a	bcd_inc_mod60	9	9	rom:0a00,rom:0200,rom:0900,rom:0800,rom:0510,	
+rom:0033	bcd_dec_mod60	6	6	rom:0aee,rom:06fc,	
+rom:0039	hour12_inc	6	6	rom:0200,rom:0900,rom:0800,	
+rom:0043	clear_page2	2	2	rom:0fe9,rom:0a5d,rom:07ef,rom:01db,rom:0410,rom:0fda,	rom:008f,
+rom:0045	sub_0045	7	7	rom:0800,	
+rom:004c	clear_page1	6	6	rom:0a5d,rom:06fc,rom:0410,	rom:008d,
+rom:0052	update_status_overlay	11	11	rom:0596,rom:0a5d,rom:07e4,rom:0200,rom:01db,rom:0410,rom:07e7,rom:0800,rom:0110,	
+rom:005d	sub_005D	5	5	rom:01db,rom:0deb,rom:0410,rom:0356,	
+rom:0062	sub_0062	2	2	rom:0a70,	rom:123b,
+rom:0064	frame_tick	16	16	rom:0a5d,rom:0a70,	
+rom:0074	sub_0074	4	4	rom:0c92,rom:06fc,	
+rom:0078	clear_sound_flags	4	4	rom:0596,rom:05f6,rom:0a00,rom:0200,rom:06fc,rom:0410,rom:0356,rom:0800,rom:0fda,	
+rom:007c	bcd_inc_sat99	1	1	rom:0a00,rom:0900,	
+rom:007d	sub_007D	10	10		
+rom:0087	set_xp_io	2	2	rom:00c2,rom:0000,rom:0bef,rom:00ed,rom:0010,rom:09f5,rom:0b60,rom:0a00,rom:00a8,rom:0900,rom:0b06,rom:0007,rom:0110,	
+rom:0089	set_xyp_ram0	4	4	rom:0a5d,rom:0200,rom:06fc,rom:0356,rom:00a3,rom:0651,rom:0c17,rom:0510,rom:0643,rom:0b55,rom:0d10,rom:0561,rom:0410,rom:0800,rom:0110,rom:0fda,rom:09dc,rom:0c6f,rom:0000,rom:0e7b,rom:01c0,rom:0010,rom:07d7,rom:07bf,rom:06da,rom:0a00,rom:00a8,rom:0900,rom:0b06,rom:0f99,rom:0007,rom:09a0,	
+rom:008d	set_xp_ram1	2	2	rom:0fe9,rom:004c,rom:0a5d,rom:049e,rom:0953,rom:06fc,rom:0410,rom:0356,rom:0438,rom:0187,rom:097b,	
+rom:008f	set_xp_ram2	2	2	rom:0953,rom:0043,rom:06fc,rom:0356,rom:0e5f,rom:097b,	
+rom:0091	sub_0091	1	1	rom:0410,rom:0438,	
+rom:0092	sub_0092	4	4	rom:0438,	
+rom:0096	sub_0096	2	2	rom:0200,rom:0800,rom:0c17,	
+rom:0098	sub_0098	1	1	rom:0410,	
+rom:0099	sub_0099	2	2	rom:0f58,	
+rom:009b	sub_009B	1	1		
+rom:009c	inc8	4	4	rom:0596,rom:06e9,rom:0a5d,rom:0200,rom:06fc,rom:01db,rom:0f99,rom:0410,rom:0800,	
+rom:00a0	test_status_bit2	3	3	rom:0596,rom:0200,rom:0800,rom:09a0,	
+rom:00a3	sub_00A3	5	5	rom:07f8,	rom:0089,
+rom:00a8	prog_timer_start	26	26	rom:08fb,	rom:0087,rom:0089,
+rom:00c2	prog_timer_stop	12	12	rom:0596,rom:0a00,rom:07e4,rom:0200,rom:0410,rom:07e7,rom:0356,rom:0800,	rom:0087,
+rom:00ce	sub_00CE	2	2	rom:0b06,rom:06fc,	
+rom:00d0	sub_00D0	2	2	rom:0fe9,rom:0a5d,	rom:1237,
+rom:00de	inc_sat_F	4	4	rom:0200,rom:0900,rom:06fc,rom:0800,	
+rom:00e2	dec8	5	5	rom:0800,	
+rom:00e7	is_battle_ready_screen	6	6	rom:0b06,rom:0b5b,	
+rom:00ed	lcd_on_buzzer_idle	5	5	rom:0a00,rom:0110,	rom:0087,
+rom:00f2	sub_00F2	3	3	rom:0a00,	
+rom:00f5	sub_00F5	3	3	rom:09dc,rom:0800,	
+rom:00f8	dispatch_page_0F	1	1	rom:0f78,rom:0410,rom:0438,	
+rom:00f9	sub_00F9	18	18	rom:0f78,rom:0410,rom:0438,	rom:0f52,rom:0f30,rom:0f40,rom:0f48,rom:0f28,rom:0f34,rom:0f2c,rom:0f38,rom:0f44,rom:0f3c,rom:0f58,rom:0f4c,
+rom:00fc	sub_00FC	2	2	rom:06e9,rom:0aee,rom:034f,rom:0200,rom:0800,	
+rom:0100	reset_vector	2	2		rom:010e,
+rom:0102	irq_timer_vector	1	1		
+rom:0103	irq_timer_trampoline	1	1		rom:17d6,
+rom:0104	irq_vec_04	1	1		
+rom:0106	irq_k0_vector	2	2		rom:1ede,
+rom:0108	irq_vec_08	1	1		
+rom:010a	irq_vec_0A	1	1		
+rom:010c	irq_prog_timer_vector	2	2		rom:1ceb,
+rom:010e	reset_entry	2	2	rom:1100,rom:0100,	
+rom:0110	start	73	73		rom:0087,rom:0a5d,rom:0200,rom:0089,rom:0e7b,rom:00ed,rom:0010,rom:07bf,rom:0052,rom:0022,rom:0a00,rom:0900,rom:0b06,rom:0b5b,rom:0007,rom:01ca,rom:0410,rom:0800,
+rom:0160	FUN_rom_0160	20	20	rom:01d4,	rom:0007,
+rom:0187	FUN_rom_0187	8	8		rom:008d,
+rom:01c0	sub_01C0	15	15		rom:0007,rom:0089,rom:07bf,
+rom:01ca	task_mark_awake	5	5	rom:0110,	
+rom:01d4	sub_01D4	7	7		rom:0160,
+rom:01db	FUN_rom_01db	60	60	rom:0410,	rom:0052,rom:005d,rom:04e6,rom:0043,rom:0953,rom:16d9,rom:0deb,rom:07e7,rom:009c,rom:08ed,
+rom:01ec	sub_01EC	24	24	rom:06fc,	rom:051d,
+rom:01f4	FUN_rom_01f4	8	8		rom:0510,
+rom:01fc	FUN_rom_01fc	4	4	rom:13fa,	rom:0e10,
+rom:0200	task_key_dispatch	313	313	rom:0110,	rom:0039,rom:0096,rom:00c2,rom:0078,rom:0089,rom:0356,rom:009c,rom:06da,rom:0052,rom:002a,rom:00fc,rom:00de,rom:00a0,rom:09a0,rom:0fda,
+rom:034f	FUN_rom_034f	4	4	rom:16e2,	rom:00fc,
+rom:0356	FUN_rom_0356	159	159	rom:0200,	rom:0aee,rom:005d,rom:07ef,rom:00c2,rom:0078,rom:0089,rom:0e12,rom:064f,rom:0efe,rom:0e73,rom:0fb9,rom:008d,rom:06e9,rom:11c6,rom:008f,
+rom:0409	sub_0409	8	8	rom:0410,	
+rom:0410	task_mode_render	318	318	rom:0110,	rom:005d,rom:04e8,rom:0098,rom:07fa,rom:0409,rom:0078,rom:1e52,rom:1fb4,rom:0e73,rom:00f9,rom:0052,rom:0930,rom:04e6,rom:18d3,rom:0561,rom:0f78,rom:07fc,rom:0474,rom:07f4,rom:004c,rom:00c2,rom:07ef,rom:055f,rom:0043,rom:0bfd,rom:01db,rom:1e79,rom:1e6a,rom:1d99,rom:0089,rom:009c,rom:0091,rom:008d,rom:0ff6,rom:00f8,rom:0f22,rom:0f21,rom:06b3,rom:0f99,rom:0563,rom:06cb,
+rom:0438	FUN_rom_0438	25	25	rom:1e79,	rom:008d,rom:00f8,rom:00f9,rom:0091,rom:0092,rom:1f93,
+rom:0451	thunk_FUN_rom_1ad4	1	1	rom:1f93,	
+rom:0474	sub_0474	8	8	rom:0410,	
+rom:0485	thunk_FUN_rom_1ad4	1	1	rom:1e52,	
+rom:049e	FUN_rom_049e	20	20	rom:1e6a,	rom:008d,rom:138d,
+rom:04b2	thunk_FUN_rom_1ad4	1	1	rom:138d,	rom:04e6,
+rom:04b9	FUN_rom_04b9	15	15	rom:18d3,	rom:04e6,rom:0fcd,
+rom:04e3	FUN_rom_04e3	3	3	rom:1d99,	
+rom:04e6	thunk_FUN_rom_1ad4	2	2	rom:1ee2,rom:04b2,rom:0715,rom:01db,rom:0deb,rom:0410,rom:04b9,	rom:055f,
+rom:04e8	thunk_FUN_rom_0561	2	2	rom:0410,	rom:0561,
+rom:04fc	FUN_rom_04fc	4	4	rom:13eb,	rom:0e12,
+rom:0510	set_injured	13	13	rom:01f4,rom:08ed,	rom:002a,rom:0089,
+rom:051d	sub_051D	4	4	rom:01ec,	
+rom:055f	thunk_FUN_rom_1ad4	2	2	rom:04e6,rom:0410,	rom:1ad4,
+rom:0561	FUN_rom_0561	2	2	rom:04e8,rom:0717,rom:06b3,rom:0410,rom:1ad4,	rom:0089,
+rom:0563	draw_hearts_meter	9	9	rom:0410,	rom:0e57,
+rom:0596	evolution_check	74	74	rom:0800,	rom:0052,rom:0d10,rom:00c2,rom:0078,rom:00a0,rom:07f6,rom:009c,
+rom:05ec	sub_05EC	10	10	rom:0aee,	rom:05f8,
+rom:05f6	FUN_rom_05f6	2	2		rom:0078,
+rom:05f8	sub_05F8	8	8	rom:05ec,	
+rom:0630	sub_0630	20	20	rom:0634,	
+rom:0634	sub_0634	15	15		rom:0630,
+rom:0643	sub_0643	12	12	rom:06f8,	rom:0089,
+rom:064f	sub_064F	18	18	rom:0c0f,rom:0356,rom:0800,	
+rom:0651	sub_0651	3	3	rom:0c0f,rom:0800,	rom:0089,rom:0654,
+rom:0654	sub_0654	2	2	rom:0651,	
+rom:06b3	thunk_FUN_rom_0561	2	2	rom:0410,	rom:0561,
+rom:06cb	sub_06CB	2	2	rom:0410,	rom:0e12,
+rom:06da	sub_06DA	15	15	rom:0200,rom:0c17,	rom:0089,
+rom:06e9	sub_06E9	15	15	rom:0aee,rom:0356,	rom:00fc,rom:009c,
+rom:06f8	sub_06F8	4	4	rom:0c0f,rom:0800,	rom:0643,rom:1aed,
+rom:06fc	FUN_rom_06fc	176	176		rom:0078,rom:07bd,rom:17e0,rom:0033,rom:00de,rom:0968,rom:008f,rom:01ec,rom:07f4,rom:004c,rom:0c92,rom:0c6f,rom:07fe,rom:13de,rom:0717,rom:0089,rom:009c,rom:13ed,rom:0fe9,rom:008d,rom:0074,rom:00ce,rom:0715,rom:0f99,rom:0976,
+rom:0715	thunk_FUN_rom_1ad4	2	2	rom:17e0,rom:075d,rom:16f3,rom:06fc,rom:0775,	rom:04e6,
+rom:0717	thunk_FUN_rom_0561	2	2	rom:06fc,	rom:0561,
+rom:075d	FUN_rom_075d	2	2	rom:13de,	rom:07f2,rom:0715,
+rom:0775	FUN_rom_0775	3	3	rom:13ed,	rom:0715,rom:0e5f,
+rom:07bd	sub_07BD	2	2	rom:06fc,	rom:0990,
+rom:07bf	task_key_scan	24	24	rom:01c0,rom:0110,	rom:0089,
+rom:07d7	enter_death_sequence	13	13	rom:0800,	rom:1eea,rom:0089,
+rom:07e4	FUN_rom_07e4	3	3	rom:1eea,	rom:0052,rom:00c2,
+rom:07e7	set_mode_C_grave	8	8	rom:0a00,rom:01db,	rom:0052,rom:00c2,
+rom:07ef	sub_07EF	3	3	rom:0410,rom:0356,	rom:0043,rom:1b7d,
+rom:07f2	sub_07F2	2	2	rom:075d,	rom:1ad8,
+rom:07f4	sub_07F4	2	2	rom:06fc,rom:0410,	rom:1ae4,
+rom:07f6	thunk_FUN_rom_1db9	2	2	rom:0596,	rom:1db9,
+rom:07f8	FUN_rom_07f8	2	2	rom:1db9,	rom:00a3,
+rom:07fa	sub_07FA	2	2	rom:0a5d,rom:0410,	rom:1fcf,
+rom:07fc	sub_07FC	2	2	rom:0a5d,rom:0410,	rom:11f8,
+rom:07fe	sub_07FE	2	2	rom:06fc,	rom:12f1,
+rom:0800	task_life_clock	237	237	rom:0110,	rom:0096,rom:0039,rom:00c2,rom:00e2,rom:09dc,rom:0045,rom:0078,rom:0089,rom:009c,rom:064f,rom:0651,rom:09db,rom:07d7,rom:0c17,rom:0052,rom:0596,rom:002a,rom:00f5,rom:00fc,rom:08f5,rom:00de,rom:00a0,rom:08ed,rom:06f8,
+rom:08ed	add_poop	8	8	rom:01db,rom:0800,	rom:0510,
+rom:08f5	sub_08F5	4	4	rom:0800,	
+rom:08f9	sub_08F9	2	2	rom:0a00,rom:09dc,	rom:1fd7,
+rom:08fb	FUN_rom_08fb	2	2	rom:1fd7,	rom:00a8,
+rom:0900	task_timekeeping	48	48	rom:0110,	rom:0087,rom:002a,rom:0039,rom:00de,rom:0089,rom:007c,rom:09a0,
+rom:0930	sub_0930	32	32	rom:0410,	rom:0950,
+rom:0950	sub_0950	3	3	rom:0930,	
+rom:0953	sub_0953	21	21	rom:0f99,rom:01db,rom:0a5d,	rom:008d,rom:008f,rom:0968,rom:0976,
+rom:0968	sub_0968	14	14	rom:0953,rom:06fc,	
+rom:0976	blit_sprite_8x8	5	5	rom:0953,rom:06fc,rom:097b,	
+rom:097b	sub_097B	21	21	rom:0fe9,rom:0a5d,	rom:008d,rom:0990,rom:008f,rom:0976,
+rom:0990	blit_column	16	16	rom:07bd,rom:097b,	
+rom:09a0	sleep_schedule_check	22	22	rom:0c0f,rom:0900,rom:0200,	rom:0089,rom:00a0,
+rom:09bf	sub_09BF	13	13	rom:0a5d,	rom:09dc,
+rom:09db	sub_09DB	1	1	rom:0800,	
+rom:09dc	sub_09DC	24	24	rom:09bf,rom:0800,	rom:00f5,rom:0089,rom:08f9,
+rom:09f4	factory_test	1	1		
+rom:09f5	sub_09F5	8	8	rom:0a00,	rom:0087,
+rom:0a00	task_sound	93	93	rom:0110,	rom:09f5,rom:0078,rom:0087,rom:07e7,rom:002a,rom:00c2,rom:00ed,rom:00f2,rom:0089,rom:007c,rom:08f9,
+rom:0a5d	task_animation	241	241	rom:0110,	rom:0052,rom:0043,rom:07fa,rom:0953,rom:0cdf,rom:008d,rom:0089,rom:004c,rom:07fc,rom:09bf,rom:0fda,rom:0064,rom:0cd0,rom:00d0,rom:097b,rom:009c,rom:0a70,rom:0cd8,
+rom:0a70	FUN_rom_0a70	5	5	rom:0a5d,	rom:0064,rom:0062,
+rom:0aee	sub_0AEE	21	21	rom:0356,	rom:06e9,rom:05ec,rom:00fc,rom:0c6f,rom:0033,
+rom:0b00	link_queue_A5	3	3		
+rom:0b03	link_queue_5A	3	3		
+rom:0b06	task_link_rx	90	90	rom:0110,	rom:0087,rom:0007,rom:0bed,rom:0ec7,rom:00e7,rom:0089,rom:0010,rom:0bf2,rom:0bec,rom:0bcb,rom:00ce,rom:0bef,rom:0bee,rom:0b55,
+rom:0b55	FUN_rom_0b55	4	4	rom:0b06,	rom:0089,rom:0010,
+rom:0b5b	task_link_tx	5	5	rom:0110,	rom:00e7,rom:0bef,
+rom:0b60	sub_0B60	20	20		rom:0087,rom:0007,rom:0bcb,rom:0bcc,
+rom:0bcb	thunk_FUN_rom_0b55	1	1	rom:0b60,rom:0b06,	
+rom:0bcc	sub_0BCC	13	13	rom:0b60,	
+rom:0bd9	sub_0BD9	13	13		rom:0bf2,
+rom:0be6	FUN_rom_0be6	6	6	rom:0deb,	rom:0bf2,
+rom:0bec	sub_0BEC	1	1	rom:0b06,	
+rom:0bed	sub_0BED	1	1	rom:0b06,	
+rom:0bee	sub_0BEE	1	1	rom:0b06,	
+rom:0bef	link_wait_edge	3	3	rom:0b06,rom:0b5b,	rom:0087,
+rom:0bf2	sub_0BF2	1	1	rom:0be6,rom:0bd9,rom:0b06,	
+rom:0bfd	sub_0BFD	2	2	rom:0410,	rom:1fdd,
+rom:0c00	caseD_0	1	1		
+rom:0c0f	caseD_f	8	8	rom:0c33,	rom:06f8,rom:064f,rom:0651,rom:09a0,
+rom:0c17	sub_0C17	17	17	rom:0d17,rom:0800,	rom:0096,rom:0089,rom:06da,
+rom:0c28	FUN_rom_0c28	11	11		
+rom:0c33	FUN_rom_0c33	11	11		rom:0c0f,rom:0c6f,rom:0c65,
+rom:0c3e	FUN_rom_0c3e	5	5		rom:0c65,
+rom:0c43	FUN_rom_0c43	3	3		
+rom:0c46	FUN_rom_0c46	5	5		rom:0c65,
+rom:0c4b	FUN_rom_0c4b	4	4		rom:0c65,
+rom:0c4f	FUN_rom_0c4f	5	5		rom:0c65,
+rom:0c54	FUN_rom_0c54	3	3		
+rom:0c57	FUN_rom_0c57	3	3		
+rom:0c5a	FUN_rom_0c5a	2	2		
+rom:0c5c	FUN_rom_0c5c	2	2		
+rom:0c5e	FUN_rom_0c5e	2	2		
+rom:0c60	FUN_rom_0c60	3	3		
+rom:0c63	FUN_rom_0c63	2	2		
+rom:0c65	sub_0C65	10	10	rom:0c3e,rom:0c4f,rom:0c46,rom:0c4b,rom:0c33,	
+rom:0c6f	sub_0C6F	14	14	rom:06fc,rom:0aee,rom:0c33,	rom:0089,
+rom:0c92	sub_0C92	5	5	rom:06fc,	rom:0fe9,rom:0074,
+rom:0cd0	sub_0CD0	8	8	rom:0a5d,	
+rom:0cd8	sub_0CD8	7	7	rom:0a5d,	
+rom:0cdf	sub_0CDF	16	16	rom:0a5d,	
+rom:0d00	caseD_0	1	1		
+rom:0d10	evolution_pick_next	7	7	rom:0596,	rom:0089,
+rom:0d17	FUN_rom_0d17	5	5		rom:0c17,
+rom:0d1c	FUN_rom_0d1c	2	2		
+rom:0d1e	FUN_rom_0d1e	4	4		
+rom:0d22	FUN_rom_0d22	20	20		rom:0d3d,
+rom:0d3d	FUN_rom_0d3d	2	2	rom:0d3f,rom:0d22,	rom:0d67,
+rom:0d3f	FUN_rom_0d3f	27	27		rom:0d3d,
+rom:0d5a	FUN_rom_0d5a	9	9		rom:0d67,
+rom:0d63	FUN_rom_0d63	2	2		
+rom:0d65	FUN_rom_0d65	2	2		
+rom:0d67	sub_0D67	19	19	rom:0d3d,rom:0d5a,	
+rom:0d7a	battle_outcome_roll	21	21		
+rom:0ddf	battle_roll_compare	12	12		
+rom:0deb	FUN_rom_0deb	9	9	rom:01db,	rom:0be6,rom:04e6,rom:005d,
+rom:0e00	caseD_0	1	1		
+rom:0e10	sub_0E10	17	17	rom:01fc,	rom:0e3d,rom:0e25,rom:0e45,rom:0e4d,rom:0e57,rom:0e35,rom:0e55,rom:0e2d,rom:0e1d,rom:0e15,
+rom:0e12	sub_0E12	3	3	rom:0356,rom:04fc,rom:06cb,	
+rom:0e15	FUN_rom_0e15	8	8	rom:0e10,	
+rom:0e1d	FUN_rom_0e1d	8	8	rom:0e10,	
+rom:0e25	FUN_rom_0e25	8	8	rom:0e10,	
+rom:0e2d	FUN_rom_0e2d	8	8	rom:0e10,	
+rom:0e35	FUN_rom_0e35	8	8	rom:0e10,	
+rom:0e3d	FUN_rom_0e3d	8	8	rom:0e10,	
+rom:0e45	FUN_rom_0e45	8	8	rom:0e10,	
+rom:0e4d	FUN_rom_0e4d	8	8	rom:0e10,	
+rom:0e55	thunk_FUN_rom_1cef	2	2	rom:0e10,	rom:1cef,
+rom:0e57	draw_full_heart	8	8	rom:0e10,rom:0563,	
+rom:0e5f	sub_0E5F	7	7	rom:0775,	rom:0e66,rom:008f,
+rom:0e66	swap_display_buffers	13	13	rom:0e5f,	
+rom:0e73	draw_heart_icon	7	7	rom:0356,rom:0410,	
+rom:0e7a	FUN_rom_0e7a	1	1		
+rom:0e7b	rng_step	12	12	rom:0110,	rom:0089,
+rom:0e87	battle_rx_dispatch	2	2		
+rom:0eb9	FUN_rom_0eb9	7	7		
+rom:0ec7	sub_0EC7	2	2	rom:0b06,	rom:1fec,
+rom:0efc	sub_0EFC	2	2		
+rom:0efe	sub_0EFE	2	2	rom:0356,	rom:1de3,
+rom:0f00	caseD_0	1	1		
+rom:0f10	caseD_0	1	1		
+rom:0f21	sub_0F21	1	1	rom:0f78,rom:0410,	
+rom:0f22	sub_0F22	2	2	rom:0410,	
+rom:0f24	FUN_rom_0f24	4	4		
+rom:0f28	FUN_rom_0f28	4	4	rom:00f9,	
+rom:0f2c	FUN_rom_0f2c	4	4	rom:00f9,	
+rom:0f30	FUN_rom_0f30	4	4	rom:00f9,	
+rom:0f34	FUN_rom_0f34	4	4	rom:00f9,	
+rom:0f38	FUN_rom_0f38	4	4	rom:00f9,	
+rom:0f3c	FUN_rom_0f3c	4	4	rom:00f9,	
+rom:0f40	FUN_rom_0f40	4	4	rom:00f9,	
+rom:0f44	FUN_rom_0f44	4	4	rom:00f9,	
+rom:0f48	FUN_rom_0f48	4	4	rom:00f9,	
+rom:0f4c	FUN_rom_0f4c	6	6	rom:00f9,	
+rom:0f52	FUN_rom_0f52	6	6	rom:00f9,	
+rom:0f58	FUN_rom_0f58	2	2	rom:00f9,	rom:0099,
+rom:0f5a	FUN_rom_0f5a	3	3		
+rom:0f5d	FUN_rom_0f5d	3	3		
+rom:0f60	FUN_rom_0f60	3	3		
+rom:0f63	FUN_rom_0f63	3	3		
+rom:0f66	FUN_rom_0f66	3	3		
+rom:0f69	FUN_rom_0f69	3	3		
+rom:0f6c	FUN_rom_0f6c	3	3		
+rom:0f6f	FUN_rom_0f6f	3	3		
+rom:0f72	FUN_rom_0f72	3	3		
+rom:0f75	FUN_rom_0f75	3	3		
+rom:0f78	sub_0F78	21	21	rom:0410,	rom:00f9,rom:0f21,rom:00f8,
+rom:0f99	sub_0F99	23	23	rom:06fc,rom:0410,	rom:0953,rom:009c,rom:0089,
+rom:0fb9	battle_build_packet1	20	20	rom:0356,	
+rom:0fcd	sub_0FCD	13	13	rom:04b9,	
+rom:0fda	sub_0FDA	8	8	rom:0a5d,rom:0200,	rom:0078,rom:0043,rom:0fe2,rom:0089,
+rom:0fe2	sub_0FE2	7	7	rom:0fda,	
+rom:0fe9	sub_0FE9	13	13	rom:0c92,rom:06fc,	rom:0043,rom:00d0,rom:097b,rom:008d,
+rom:0ff6	sub_0FF6	7	7	rom:0410,	
+rom:1000	sub_1000	3	3		
+rom:1003	sub_1003	3	3	rom:1326,	
+rom:1006	sub_1006	3	3	rom:12bc,	
+rom:1009	sub_1009	13	13	rom:1620,	
+rom:1016	sub_1016	4	4	rom:1f78,rom:1f41,rom:1f80,rom:1f5d,	
+rom:101a	sub_101A	3	3	rom:1450,rom:145b,	
+rom:101d	sub_101D	4	4		
+rom:1021	sub_1021	8	8		
+rom:1029	sub_1029	3	3		
+rom:102c	sub_102C	6	6	rom:1560,	
+rom:1032	sub_1032	6	6	rom:1573,	
+rom:1038	sub_1038	9	9		
+rom:1041	sub_1041	5	5		
+rom:1046	sub_1046	5	5	rom:1152,	
+rom:104b	sub_104B	6	6	rom:1195,	
+rom:1051	sub_1051	8	8	rom:181d,	
+rom:1059	sub_1059	4	4		
+rom:105d	sub_105D	7	7	rom:185b,	
+rom:1064	sub_1064	8	8		
+rom:106c	sub_106C	7	7	rom:195f,rom:192d,	
+rom:1073	sub_1073	6	6		
+rom:1079	sub_1079	3	3	rom:1a27,rom:1a32,	
+rom:107c	sub_107C	5	5	rom:1081,	
+rom:1081	sub_1081	7	7		rom:107c,
+rom:1088	sub_1088	4	4	rom:1b54,rom:1aab,	
+rom:108c	sub_108C	7	7	rom:1d61,rom:1d35,	
+rom:1093	sub_1093	6	6	rom:1d6b,rom:1d4f,	
+rom:1099	sub_1099	3	3		
+rom:109c	sub_109C	3	3	rom:1c4c,	
+rom:109f	sub_109F	7	7	rom:124c,rom:1896,	
+rom:10a6	sub_10A6	15	15	rom:124c,	
+rom:10b5	sub_10B5	8	8	rom:17e0,rom:1b8e,rom:1b7d,rom:124c,rom:1237,	
+rom:10bd	sub_10BD	20	20	rom:17e0,rom:13ac,rom:1b8e,rom:15ab,	
+rom:10d1	sub_10D1	17	17	rom:17e0,rom:1b8e,rom:13b9,	
+rom:10e2	sub_10E2	4	4	rom:19b9,	
+rom:10e6	sub_10E6	3	3	rom:19ee,	
+rom:10e9	sub_10E9	2	2	rom:13ac,rom:19b9,rom:1240,rom:1e40,	
+rom:10eb	sub_10EB	2	2	rom:16d9,rom:159f,rom:16f3,rom:124c,rom:15c8,rom:18b1,	
+rom:10ed	sub_10ED	4	4	rom:1fdd,rom:1ad8,rom:11f8,rom:1fec,rom:1ae4,rom:1fcf,rom:1fd7,rom:1db9,rom:1de3,	
+rom:10f1	sub_10F1	2	2	rom:1fd7,rom:1db9,	rom:10f5,
+rom:10f3	sub_10F3	2	2	rom:1de8,	rom:10f5,
+rom:10f5	sub_10F5	7	7	rom:10f3,rom:10f1,	
+rom:1100	b1_reset_vector	2	2		rom:010e,
+rom:1102	b1_irq_timer_vector	2	2		rom:17b9,
+rom:1104	b1_irq_vec_04	1	1		
+rom:1106	b1_irq_k0_vector	2	2		rom:1ac6,
+rom:1108	b1_irq_vec_08	1	1		
+rom:110a	b1_irq_vec_0A	1	1		
+rom:110c	b1_irq_prog_timer_vector	2	2		rom:1bb3,
+rom:1152	sub_1152	12	12		rom:1046,
+rom:118d	sub_118D	6	6		rom:11f5,
+rom:1195	sub_1195	7	7		rom:104b,
+rom:119c	sub_119C	21	21		
+rom:11c6	FUN_rom_11c6	34	34	rom:0356,	rom:13bb,
+rom:11e8	sub_11E8	10	10		
+rom:11f2	FUN_rom_11f2	3	3		
+rom:11f5	FUN_rom_11f5	3	3	rom:118d,	
+rom:11f8	FUN_rom_11f8	8	8	rom:07fc,	rom:1fe1,rom:10ed,
+rom:1200	species_gfx_table	2	2		
+rom:1220	thunk_FUN_rom_12bc	1	1		
+rom:1230	species_gfx_dispatch	1	1	rom:17e0,rom:1b7d,rom:1240,rom:124c,rom:1237,	
+rom:1231	sub_1231	6	6	rom:1b8e,	
+rom:1237	FUN_rom_1237	4	4	rom:00d0,	rom:10b5,rom:1230,
+rom:123b	FUN_rom_123b	3	3	rom:0062,	rom:1896,
+rom:1240	FUN_rom_1240	13	13	rom:124c,	rom:10e9,rom:129c,rom:1230,
+rom:124c	FUN_rom_124c	80	80	rom:124c,	rom:109f,rom:10a6,rom:12c8,rom:10b5,rom:1240,rom:12ac,rom:124c,rom:1230,rom:12b1,rom:10eb,rom:129f,
+rom:129c	FUN_rom_129c	3	3	rom:1240,	
+rom:129f	FUN_rom_129f	13	13	rom:124c,	
+rom:12ac	FUN_rom_12ac	5	5	rom:124c,	
+rom:12b1	FUN_rom_12b1	6	6	rom:124c,	
+rom:12bc	FUN_rom_12bc	6	6		rom:1006,
+rom:12c8	FUN_rom_12c8	2	2	rom:124c,	
+rom:12f1	FUN_rom_12f1	14	14	rom:07fe,	
+rom:1326	sub_1326	7	7		rom:1003,
+rom:138d	FUN_rom_138d	31	31	rom:049e,	rom:04b2,
+rom:13ac	sub_13AC	13	13		rom:10e9,rom:10bd,
+rom:13b9	FUN_rom_13b9	2	2		rom:10d1,
+rom:13bb	FUN_rom_13bb	35	35	rom:11c6,	
+rom:13de	FUN_rom_13de	13	13	rom:06fc,	rom:13eb,rom:075d,
+rom:13eb	sub_13EB	2	2	rom:13de,	rom:04fc,
+rom:13ed	FUN_rom_13ed	13	13	rom:06fc,	rom:13fa,rom:0775,
+rom:13fa	sub_13FA	2	2	rom:13ed,	rom:01fc,
+rom:1422	sub_1422	10	10		
+rom:1437	sub_1437	9	9		
+rom:1450	sub_1450	11	11		rom:101a,
+rom:145b	sub_145B	10	10		rom:101a,
+rom:14ab	sub_14AB	17	17		
+rom:14bc	sub_14BC	65	65	rom:16f3,	
+rom:1538	sub_1538	15	15		
+rom:1550	sub_1550	14	14		
+rom:1560	sub_1560	6	6		rom:102c,
+rom:1573	sub_1573	5	5		rom:1032,
+rom:157a	sub_157A	10	10		
+rom:159f	sub_159F	12	12		rom:10eb,
+rom:15ab	FUN_rom_15ab	23	23	rom:15ab,	rom:15ab,rom:10bd,
+rom:15c8	sub_15C8	7	7		rom:10eb,
+rom:15ee	sub_15EE	15	15		
+rom:1620	sub_1620	6	6		rom:1009,rom:1626,
+rom:1626	sub_1626	5	5	rom:1620,	
+rom:164c	sub_164C	4	4		
+rom:1689	sub_1689	15	15		
+rom:16aa	sub_16AA	12	12		
+rom:16b6	sub_16B6	35	35	rom:16f3,	rom:1999,
+rom:16d9	FUN_rom_16d9	9	9	rom:01db,	rom:1ca0,rom:1caa,rom:10eb,
+rom:16e2	FUN_rom_16e2	17	17		rom:034f,
+rom:16f3	FUN_rom_16f3	10	10	rom:17e0,	rom:0715,rom:16b6,rom:10eb,rom:14bc,
+rom:17b9	irq_heartbeat	29	29	rom:17d6,rom:1102,	
+rom:17d6	irq_timer_trampoline	3	3	rom:0103,	rom:17b9,
+rom:17e0	FUN_rom_17e0	31	31	rom:06fc,	rom:0715,rom:16f3,rom:10b5,rom:10d1,rom:1230,rom:10bd,
+rom:181d	sub_181D	9	9		rom:1051,
+rom:185b	sub_185B	4	4		rom:105d,
+rom:1896	sub_1896	26	26	rom:123b,	rom:109f,
+rom:18b1	sub_18B1	15	15		rom:10eb,
+rom:18d3	FUN_rom_18d3	27	27	rom:0410,	rom:04b9,
+rom:18ee	sub_18EE	15	15		
+rom:192d	sub_192D	9	9		rom:106c,
+rom:1941	sub_1941	14	14		
+rom:1953	sub_1953	10	10		
+rom:195f	sub_195F	8	8		rom:106c,
+rom:197c	sub_197C	13	13		
+rom:1999	FUN_rom_1999	32	32	rom:16b6,	
+rom:19b9	sub_19B9	53	53	rom:1ad4,	rom:19f8,rom:10e9,rom:10e2,
+rom:19ee	FUN_rom_19ee	10	10		rom:19f8,rom:10e6,
+rom:19f8	sub_19F8	8	8	rom:19b9,rom:19ee,	
+rom:1a27	sub_1A27	11	11		rom:1079,
+rom:1a32	sub_1A32	9	9		rom:1079,
+rom:1a7c	FUN_rom_1a7c	16	16		
+rom:1a8e	sub_1A8E	14	14		
+rom:1a9c	sub_1A9C	15	15		
+rom:1aab	sub_1AAB	13	13		rom:1088,
+rom:1ac6	irq_key_wake	14	14	rom:1106,rom:1ede,	
+rom:1ad4	FUN_rom_1ad4	4	4	rom:055f,	rom:19b9,rom:0561,
+rom:1ad8	FUN_rom_1ad8	12	12	rom:07f2,	rom:10ed,
+rom:1ae4	FUN_rom_1ae4	5	5	rom:07f4,	rom:1ae9,rom:10ed,
+rom:1ae9	sub_1AE9	4	4	rom:1ae4,	
+rom:1aed	FUN_rom_1aed	18	18	rom:06f8,	
+rom:1b54	sub_1B54	10	10		rom:1088,
+rom:1b7d	FUN_rom_1b7d	17	17	rom:07ef,	rom:1b9a,rom:10b5,rom:1230,rom:1bae,
+rom:1b8e	FUN_rom_1b8e	12	12		rom:1b9a,rom:10b5,rom:1231,rom:10d1,rom:10bd,
+rom:1b9a	sub_1B9A	2	2	rom:1b8e,rom:1b7d,	
+rom:1b9c	FUN_rom_1b9c	15	15		
+rom:1bab	FUN_rom_1bab	3	3		
+rom:1bae	sub_1BAE	5	5	rom:1b7d,	
+rom:1bb3	irq_sound_player	66	66	rom:1ceb,rom:110c,	
+rom:1bf5	sub_1BF5	9	9		
+rom:1c4c	sub_1C4C	25	25		rom:109c,
+rom:1ca0	sub_1CA0	10	10	rom:16d9,	
+rom:1caa	sub_1CAA	12	12	rom:16d9,	
+rom:1cb9	FUN_rom_1cb9	18	18		rom:1ccb,
+rom:1ccb	sub_1CCB	2	2	rom:1cb9,	
+rom:1ceb	irq_prog_timer_trampoline	4	4	rom:010c,	rom:1bb3,
+rom:1cef	FUN_rom_1cef	3	3	rom:0e55,	rom:1cf2,
+rom:1cf2	sub_1CF2	8	8	rom:1cef,	
+rom:1d35	sub_1D35	10	10		rom:108c,
+rom:1d4f	sub_1D4F	11	11		rom:1093,
+rom:1d61	sub_1D61	8	8		rom:108c,
+rom:1d6b	sub_1D6B	5	5		rom:1093,
+rom:1d72	sub_1D72	11	11		
+rom:1d99	FUN_rom_1d99	32	32	rom:0410,	rom:04e3,
+rom:1db9	FUN_rom_1db9	30	30	rom:07f6,	rom:1ddf,rom:1dd7,rom:07f8,rom:1ddb,rom:10f1,rom:10ed,
+rom:1dd7	sub_1DD7	4	4	rom:1db9,	
+rom:1ddb	sub_1DDB	4	4	rom:1db9,	
+rom:1ddf	sub_1DDF	4	4	rom:1db9,	
+rom:1de3	FUN_rom_1de3	5	5	rom:0efe,	rom:1df4,rom:10ed,
+rom:1de8	FUN_rom_1de8	12	12		rom:1df4,rom:10f3,
+rom:1df4	sub_1DF4	2	2	rom:1de8,rom:1de3,	
+rom:1e40	sub_1E40	8	8		rom:10e9,
+rom:1e52	FUN_rom_1e52	24	24	rom:0410,	rom:0485,
+rom:1e6a	FUN_rom_1e6a	15	15	rom:0410,	rom:1ec8,rom:1ed9,rom:1ec4,rom:049e,rom:1e88,rom:1eca,rom:1ed7,
+rom:1e79	FUN_rom_1e79	15	15	rom:0410,	rom:1ec8,rom:1ec4,rom:0438,rom:1e88,rom:1ed5,rom:1eca,rom:1ed7,
+rom:1e88	sub_1E88	13	13	rom:1e79,rom:1e6a,	rom:1e9c,rom:1eb3,
+rom:1e9c	sub_1E9C	6	6	rom:1e88,	
+rom:1ea2	sub_1EA2	17	17		
+rom:1eb3	sub_1EB3	17	17	rom:1e88,	
+rom:1ec4	sub_1EC4	4	4	rom:1e79,rom:1e6a,	
+rom:1ec8	sub_1EC8	2	2	rom:1e79,rom:1e6a,	
+rom:1eca	sub_1ECA	2	2	rom:1e79,rom:1e6a,	
+rom:1ecc	sub_1ECC	9	9		
+rom:1ed5	sub_1ED5	2	2	rom:1e79,	
+rom:1ed7	sub_1ED7	2	2	rom:1e79,rom:1e6a,	
+rom:1ed9	sub_1ED9	5	5	rom:1e6a,	
+rom:1ede	irq_k0_trampoline	4	4	rom:0106,	rom:1ac6,
+rom:1ee2	FUN_rom_1ee2	8	8	rom:1fb4,	rom:04e6,
+rom:1eea	FUN_rom_1eea	6	6	rom:07d7,	rom:07e4,
+rom:1f23	sub_1F23	14	14		
+rom:1f41	sub_1F41	11	11		rom:1016,
+rom:1f5d	sub_1F5D	8	8		rom:1016,
+rom:1f68	sub_1F68	14	14		
+rom:1f78	sub_1F78	6	6		rom:1016,
+rom:1f80	sub_1F80	8	8		rom:1016,
+rom:1f8a	sub_1F8A	9	9		
+rom:1f93	FUN_rom_1f93	33	33	rom:0438,	rom:0451,
+rom:1fb4	FUN_rom_1fb4	27	27	rom:0410,	rom:1ee2,
+rom:1fcf	FUN_rom_1fcf	8	8	rom:07fa,	rom:10ed,
+rom:1fd7	FUN_rom_1fd7	6	6	rom:08f9,	rom:08fb,rom:10f1,rom:10ed,
+rom:1fdd	FUN_rom_1fdd	4	4	rom:0bfd,	rom:1fe1,rom:10ed,
+rom:1fe1	sub_1FE1	4	4	rom:1fdd,rom:11f8,	
+rom:1fec	FUN_rom_1fec	18	18	rom:0ec7,	rom:10ed,

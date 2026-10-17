@@ -44,9 +44,10 @@ Every claim is tagged with how it is known:
 14. [The factory test](#14-the-factory-test)
 15. [The playground rumours, settled](#15-the-playground-rumours-settled)
 16. [Ver. 1 against Ver. 2](#16-ver-1-against-ver-2)
-17. [Notes on the tools](#17-notes-on-the-tools)
-18. [Reproducing this](#reproducing-this)
-19. [Appendices](#appendices)
+17. [The community's guide, checked](#17-the-communitys-guide-checked)
+18. [Notes on the tools](#18-notes-on-the-tools)
+19. [Reproducing this](#reproducing-this)
+20. [Appendices](#appendices)
 
 ---
 
@@ -123,8 +124,8 @@ What each found, for Ver. 1:
 | Words decoded and reassembled byte-identically | **8,192 / 8,192** (Ver. 1 and Ver. 2) — measured |
 | Words reached by the walker | **8,092 / 8,192**; 74 of the other 100 are `nop7` filler — measured |
 | Words actually executed across the scenarios | **7,080 / 8,192** — measured |
-| Words Ghidra's auto-analysis covers on its own (vectors seeded) | **4,788 / 8,192** — measured |
-| Executed words Ghidra alone leaves undefined | **2,618**; with the recovered map applied, **0** — measured |
+| Words Ghidra's auto-analysis covers on its own (both vector tables seeded) | **4,799 / 8,192** — measured |
+| Executed words Ghidra alone leaves undefined | **2,612**; with the recovered map applied, **0** — measured |
 | Executed words the walker missed before being seeded with the trace | **69** — measured |
 | Subroutines (`CALL`/`CALZ` targets plus interrupt vectors, both banks' tables) | **288** — measured |
 
@@ -134,11 +135,11 @@ linked battle in each role and a broken link; death and the grave; the factory t
 including the link self-test between two units; every button held during reset; and every
 species slot forced in turn and allowed to reach its next evolution.
 
-The round trip paid for itself early. It caught three bugs in BrickEmuPy's
-*disassembler* (not its emulation, which is correct): `CP YL,i` printed as `ADC YL,i`,
-`DEC M(n)` printed as `INC M(n)`, and `RLC r`'s doubled register field. Ghidra's gap is
+The round trip paid for itself early. It caught two bugs in BrickEmuPy's
+*disassembler* (not its emulation, which is correct): `CP YL,i` printed as `ADC YL,i`, and
+`DEC M(n)` printed as `INC M(n)`, now reported upstream. Ghidra's gap is
 almost entirely `JPBA`: a computed jump it cannot follow, which hides the species dispatch
-table and nearly all of bank 1 behind it. Details in §17.
+table and nearly all of bank 1 behind it. Details in §18.
 
 ---
 
@@ -549,8 +550,19 @@ There are two ways into an injury, and both go through the same routine, `set_in
 `set_injured` sets the bit, restarts the six-hour clock at `M(38–3A)` if the Digimon was
 not already injured, and in every case adds one to a two-digit decimal count at
 `M(36–37)`. When that count reaches 20, `0x0521` calls `enter_death_sequence` directly:
-a second way to die, by accumulated injuries rather than one untreated injury (**read**;
-not exercised here).
+a second way to die, by accumulated injuries rather than one untreated injury
+(**measured**: with the count at 19, one more injury starts the death sequence; at 18 it
+does not).
+
+That makes four ways to die, and all of them were measured (§17):
+
+- six hours injured;
+- the twentieth injury in one form;
+- a call left unanswered for twelve hours;
+- the fifth care mistake after the lifespan has run out.
+
+The lifespan runs out when an adult's or Perfect's final timer passes without an
+evolution: `0x0D5F` sets `M(76)` bit 1, and from then on `M(75)` counts care mistakes.
 
 The finer rules of care — how protein moves energy, enhancement and the chance of injury,
 how care mistakes subtract — were worked out on real hardware by the DMComm project and
@@ -799,39 +811,184 @@ in the second nibble of packet 2 (`0DE5 ldpx M(X), 0x0`), Ver. 2 loads whatever 
 holds and sends that instead (`0DE9 ldpx A, M(X)`) (**read**). The two ROMs are one
 program with two sets of monsters.
 
+Ver. 2 went through the same static pipeline (**measured**):
+
+| | Ver. 1 | Ver. 2 |
+|---|---:|---:|
+| Words reassembled byte-identically from the annotated listing | 8,192 | 8,192 |
+| Words reached by the walker (no traces) | 8,023 | 8,045 |
+| … after seeding with executed PCs | 8,092 | (no Ver. 2 traces) |
+| Subroutines | 288 | 267 |
+| Words Ghidra decodes on its own / with the map | 4,799 / 8,098 | 4,844 / 8,045 |
+
+The Ver. 2 names are carried over rather than rediscovered. `tools/static/port_names.py`
+moves a Ver. 1 name to Ver. 2 when its address lies in an identical aligned run, or, for
+a function outside one, when its first eight instructions match exactly one Ver. 2
+subroutine. That ports 72 of the 74 named functions and entry points and 9 of the 11
+labels. Each is marked `ported`, not measured. The care and evolution rules were measured
+on Ver. 2 directly (§17).
+
+
+## 17. The community's guide, checked
+
+The most complete public reference for these rules is humulos's site: an
+[evolution guide](https://humulos.com/digimon/dm/) (requirements, waking hours,
+lifespans, an FAQ on care and death) and a [battle chart](https://humulos.com/digimon/dm/battles/).
+The site credits the evolution data mainly to NHOKO, and the battle data to fans who took
+the device apart, with Kurozatou as the main interpreter. Every checkable claim on those
+two pages was put to the firmware here. The method was the same as for the battle table:
+poke the inputs into RAM, start the CPU at the routine that decides, and read what it
+computed (`tools/emulation/care_rules.py`, `tools/emulation/starvation.py`; all
+**measured** unless marked).
+
+The [Digimon Original (Ver.20th) guide](https://humulos.com/digimon/dm20/) on the same
+site covers a different device. It is the 2017 re-release, with its own program, and its
+Ver. 1 chart deliberately changes the rules. Compared with this ROM, it uses 3 care
+mistakes rather than 4 as the branch point and lowers the training thresholds (16 rather
+than 32 for Greymon, for example). It drops the sleep-disturbance conditions, has
+Botamon evolve after 10 minutes rather than about an hour, and replaces the Perfect roll
+with "15 battles, 12–15 victories". Its bedtimes are one to three hours later. None of
+that is a disagreement with the 1997 code. It is a different game, and the 1997 pages
+are the ones to check.
+
+### Where the guide and the firmware agree
+
+| Claim on the guide | Checked how | Result |
+|---|---|---|
+| Battle chart: 12 × 12 initiator win chances | `0x0D7A` executed for every pairing | all 144 cells identical |
+| Boost = ⌊max(min(overdoses, 4) + strength hearts − min(care mistakes, 4), 0) / 2⌋ | code at `0x0FB9` | the same formula, instruction for instruction (**read**) |
+| Boost difference added to the chance, clamped at 1/16 and 16/16 | `0x0DD3`–`0x0DDE` | yes |
+| Evolution requirements (care mistakes, training, overfeed, sleep disturbances) for Koromon, Agumon and Betamon | `0x0D10` executed over 14,112 combinations | every combination picks the Digimon the guide's main entries name |
+| Perfect: 15 battles, then a roll at 1/8, 1/4 or 1/2 for a win score of 0–4, 5–8 or 9–15 | `0x0D67` over all win scores and dice | exactly that; with 14 battles, never |
+| The roll happens at both the III→IV and IV→V evolutions, either success suffices (75% at best) | qualified bit `M(76).0` survives the III→IV setup | yes |
+| Win score +1 per win, −1 per loss, kept within 0–15 | `0x0736`–`0x0741` | yes (**read**) |
+| Battles and win score carry over; care mistakes and injuries reset | `0x0C17` with every counter preset | `M(98–99)` kept; `M(31–37)` cleared |
+| Waking and sleeping hours of all 13 Digimon | `0x0C17` per slot | all 13 identical |
+| A care mistake when a call goes unanswered for 20 minutes | `0x08C3`: the call timer's tens digit reaching 2 | yes (**read**) |
+| Death after 6 hours injured | an untreated unit | death sequence at 359 minutes (§10) |
+| Death from 5 care mistakes once the lifespan is up | `0x08C8` with `M(76).1` set | the fifth calls `enter_death_sequence`; the fourth does not |
+
+The guide's FAQ wonders whether hunger and strength emptying together count as one care
+mistake or two. The code says one. `0x09DC` raises a single call and only starts its
+timer if no call is already running; the second empty heart just adds its bit to `M(65)`.
+So one unanswered call makes one care mistake (**read**).
+
+### Where they differ
+
+1. **A typo in Betamon's Numemon list.** The guide gives "4+ care mistakes, 8–31 training,
+   3+ overfeed, 9+ sleep disturbances" as a route to Numemon, and also "0–3 overfeed, 9+
+   sleep disturbances" as the route to Airdramon. The two overlap at exactly 3 overfeeds.
+   The firmware sends that case to Airdramon. The Numemon bullet should read 4+ overfeed.
+2. **Greymon's lifespan.** The guide says 116 hours. The firmware schedules Greymon's next
+   evolution between 120:00 and 127:59 of stage time. The guide's own FAQ table ("44–124
+   hours" for Stage IV) is consistent with the firmware, not with the Greymon entry.
+3. **Lifespans are windows, not numbers.** `0x0C65` builds the next-evolution time from
+   the dice. The minutes come from `M(A0)` and the clock's tens of minutes. The hours are
+   a per-species multiple of 16 plus `M(A2) | 8`, which is 8 to 15. Every stage after the
+   first therefore ends somewhere in an eight-hour window: 40–48 h for Koromon and
+   Numemon; 72–80 h for the children, Tyranomon, Meramon, Seadramon and Mamemon; 104–112 h
+   for Devimon, Airdramon, MetalGreymon and Monzaemon; 120–128 h for Greymon. The guide's
+   figures are the windows' midpoints. Botamon is the exception. It evolves 50–59
+   minutes in, or 60–69 if the dice's tens digit `M(A1)` is 5 or more.
+4. **"Getting sick ?? times" is 20 injuries.** The guide lists an unknown number of
+   sicknesses as a cause of death. In this firmware every injury goes through
+   `set_injured`, whether from a battle or from the eighth pile of poop, and it adds one
+   to a decimal count at `M(36–37)`. The twentieth injury in one form starts the death
+   sequence: count 19 plus one injury gives mode B, while count 18 plus one does not.
+   The FAQ also says "20 Care Mistakes or Injuries" stop an evolution. Care mistakes
+   can't. Their counter `M(31)` stops at 15, and no route into the death sequence reads it
+   (**read**: there are exactly two ways into the death sequence, `0x0522` and `0x08DD`).
+5. **Overdoses count to 15, not 4.** The guide says the overdose count "has a maximum value
+   of 4". The counter `M(62)` goes up by one per four proteins and saturates at 15
+   (`0x0341`–`0x0347`); only the boost formula caps it at 4. The uncapped count feeds the
+   injury roll, which the guide doesn't describe. After every battle, `0x01EC` injures the
+   Digimon when the dice `M(A3)` are at or below a per-species base plus the overdose
+   count. The chance is (base + overdoses + 1) / 16. The base is 3 for Betamon and
+   Numemon; 2 for Agumon, Tyranomon and Seadramon; 1 for Greymon, Devimon, Meramon,
+   Airdramon and MetalGreymon; and 0 for Mamemon and Monzaemon. The roll also has a hole.
+   When base plus overdoses is exactly 15, `0x01F4` skips it altogether, so an Agumon with
+   13 overdoses can't be injured in battle, while one with 12 or 14 is injured 15 times in
+   16.
+6. **Starving takes 12 hours, not 6.** The guide says a heart left empty for 6
+   consecutive hours is fatal. An empty heart raises a call (`0x09DC`), which clears a
+   timer at `M(40–43)`. The timer counts minutes, then hours through `hour12_inc`, and
+   `0x08BD` starts the death sequence when the hour count reaches 12. An emulated
+   Agumon was kept awake with the call running and no button pressed. It died at exactly
+   720 minutes, after one care mistake at the 20-minute mark. A second run, with the hour
+   count preset to 6, died at 360 minutes. That pins the threshold at a count of 12 with
+   the count starting from zero (`data/starvation_v1_*.json`). Whether sleep pauses this
+   timer was not tested. The 6 hours may come from the injury rule, which really is six.
+
+### Ver. 2
+
+The same experiments ran on the Ver. 2 ROM, whose deciding routines sit at the same
+addresses as in Ver. 1, against the guide's Ver. 2 entries. A freshly reset unit
+supplied the RAM image.
+
+- **Agree:**
+  - The waking and sleeping hours of all 13 Digimon.
+  - The Perfect roll.
+  - The 20-injury and old-age deaths.
+  - Every evolution choice for Tsunomon and Gabumon.
+  - The per-slot injury bases, which are identical to Ver. 1's.
+- **Same windows, same slip:**
+  - Tsunomon evolves between 32 and 40 hours; the guide says 36.
+  - Kabuterimon, in Greymon's slot, evolves between 120 and 128 hours, and the guide says
+    116, the same mismatch as Greymon's.
+- **Elecmon's training bands are different from the guide's.** The guide sends a neglected
+  Elecmon (4+ care mistakes) towards Frigimon (Yukidarumon) with 8–31 training, and
+  towards Whamon with 32+. The code splits at 16. In Ver. 1, Betamon's branch tests the
+  high nibble of the training count twice, once for "below 16" and once for "exactly
+  16–31". Ver. 2's Elecmon branch (`0x0D48`–`0x0D4B`) has only the first test. With
+  16–31 training, an Elecmon therefore takes the Whamon route: 6+ overfeeds and 0–4 sleep
+  disturbances for Whamon, Vegimon otherwise. Of 4,704 Elecmon combinations tried, 228
+  disagree with the guide, all of them in that band.
+
+The battle page already said that the chart "contradicts the official magazine guides"
+because "the programmed scenarios" were "not triggering properly", and that Monzaemon was
+"certainly intended" to be the strongest. The two slips in §13 are the mechanism behind
+that observation. The guide recorded the effect from the device; the code shows why.
+
 
 ---
 
-## 17. Notes on the tools
+## 18. Notes on the tools
 
 ### Ghidra and the E0C6S46 module
 
 The community module (Veryyes/E0C6S46-Ghidra-Processor) compiles cleanly with Ghidra 12's
 SLEIGH compiler and decodes every instruction correctly. Seeded with the reset and
-interrupt vectors, auto-analysis of Ver. 1 covers 4,788 of 8,192 words — 3,603 in bank 0
-but only 1,185 in bank 1 — and leaves 2,618 *executed* words undefined (**measured**).
+interrupt vectors of both banks' tables, auto-analysis of Ver. 1 covers 4,799 of 8,192
+words — 3,603 in bank 0 but only 1,196 in bank 1 — and leaves 2,612 *executed* words
+undefined (**measured**; Ver. 2: 4,844 words, and the full comparison for both versions
+is in [`ghidra/README.md`](../ghidra/README.md)).
 
 The cause is **`JPBA`**, a computed jump to `B:A` on the current or `PSET` page. Ghidra
 cannot know B and A, so everything reached only through the 25 jump tables stays dark:
 the per-species table at `0x1200` (and with it most of bank 1), the mode handlers, the
 battle state machine. `ghidra/ApplyMap.java` adds the walker's recovered targets as
 computed-jump references, names the subroutines, labels and variables, and disassembles the
-rest; afterwards Ghidra covers 8,100 words and no executed word is undefined (**measured**).
+rest; afterwards Ghidra covers 8,098 words of Ver. 1 and 8,045 of Ver. 2, and no word
+the walker reaches, executed or not, is left undefined (**measured**).
 
 Two smaller things are worth knowing if you use the module on other ROMs:
 
 - A `PSET`-prefixed `CALL` keeps the current bank in the module
-  (`:CALL s (thisPcb) is ... pprev=1`), while the emulator's core takes the bank from the
-  `PSET`. This ROM never makes a cross-bank call (**measured**: 0 sites; bank 1 is entered
-  only by 79 cross-bank `PSET`+`JP`s, which the module handles correctly), so here it does
-  not matter.
-- The `rom` space is word-addressed, and Ghidra's `AddressSpace.getAddress()` takes a
-  *byte* offset: word `0x110` is `getAddress(0x220)`. The module's `.pspec` writes its
-  `start` symbol as `rom:0x110`, which lands on word `0x088`. Scripts that seed or label
-  ROM words must multiply by the addressable unit size (the scripts here do; an earlier
-  draft of them did not, and measured nonsense).
+  (`:CALL s (thisPcb) is ... pprev=1`). That is what Epson's manual specifies (`CALL`:
+  `PCP ← NPP, PCS ← s`, with no bank transfer; **documented**), and it matches `RET`, which
+  cannot return across banks either. BrickEmuPy's core instead takes the bank from the
+  `PSET`, contrary to the manual text quoted in its own comment. This ROM never makes a
+  cross-bank call (**measured**: 0 sites; bank 1 is entered only by 79 cross-bank
+  `PSET`+`JP`s, which both handle identically), so here the difference is moot.
+- The `rom` space is word-addressed, but Ghidra's `AddressSpace.getAddress(long)` takes a
+  *byte* offset: word `0x110` is `getAddress(0x220)`. Address *strings*, such as the
+  `.pspec`'s `start` symbol at `rom:0x110`, are already in words; that symbol lands on word
+  `0x110` (**measured**), which in this ROM is the third instruction of initialisation
+  rather than the reset vector at `0x100`. Scripts that seed or label ROM words from
+  numbers must multiply by the addressable unit size (the scripts here do; an earlier
+  draft did not, and measured nonsense).
 
-Of the 313 functions Ghidra finds on its own, 186 match the walker's subroutines; 121 of
+Of the 320 functions Ghidra finds on its own, 193 match the walker's subroutines; 121 of
 the other 127 are `JP` targets that Ghidra promotes to functions (61 of them reached by a
 `PSET`-prefixed jump from another page), and the last six are jump-table bases and the
 entry point. That is a different definition of "function", not a disagreement about code;
@@ -840,17 +997,22 @@ With the map applied, all 288 are functions in the Ghidra project too.
 
 ### BrickEmuPy's disassembler
 
-The round trip through the reassembler found three display bugs, all in the
-disassembler only; the emulation core executes every one of these correctly
-(**measured**):
+The round trip through the reassembler found two display bugs, both in the disassembler
+only; the emulation core executes these opcodes correctly (**measured**):
 
-| Opcode | Shown as | Actually |
-|---|---|---|
-| `A70`–`A7F` | `adc YL, i` | `cp YL, i` (the core's handler is `_cp_yl_i`) |
-| `F70`–`F7F` | `inc M(n)` | `dec M(n)` (unused by both ROMs) |
-| `AFx` | `rlc r` from the low two bits | the register field is written twice; the ROM uses only the canonical form |
+| Opcode | Shown as | Actually | Used by |
+|---|---|---|---|
+| `A70`–`A7F` | `adc YL, i` | `cp YL, i` (the core's handler is `_cp_yl_i`) | Ver. 1: 8 words, Ver. 2: 6 |
+| `F70`–`F7F` | `inc M(n)` | `dec M(n)` | neither ROM |
 
-`tools/static/dasm_fixed.py` patches all three.
+windwakr's BrickEmuPy issue #41 had pointed at the same lines along with a third bug
+(`add r, q` and its siblings printed `r` twice). That third one was fixed upstream on
+2026-10-03, before this work cloned the repository; these two are still present at the
+current `main` and are reported as
+[azya52/BrickEmuPy#42](https://github.com/azya52/BrickEmuPy/issues/42). A related quirk is
+not a bug: `RLC r` (`AFx`) encodes its register twice, and the disassembler reads the low
+copy, so the non-canonical encodings print as valid `rlc` instructions. Neither ROM uses
+one. `tools/static/dasm_fixed.py` patches the two bugs and canonicalises the alias.
 
 ### The walker
 
@@ -887,6 +1049,8 @@ done
 python3 -c "import json,glob; print(json.dumps(sorted({p for f in glob.glob('$G/cov/*.json') \
   for p in json.load(open(f))['pcs']})))" > $G/executed.json
 PYTHONPATH=$BRICK python3 threshold.py $ROM ../../data/battle_threshold_v1.json 0D7A
+PYTHONPATH=$BRICK python3 care_rules.py st_v1_childA.pkl ../../data/care_rules_v1.json
+PYTHONPATH=$BRICK python3 starvation.py st_v1_childA.pkl 0 $G/starvation_0.json
 cd ../..
 
 # 2. static map, seeded with the executed PCs; annotated listing; lossless round trip
@@ -896,6 +1060,14 @@ python3 classify.py $G/v1/static.json $G/executed.json $G/v1/classes.json
 python3 listing.py $G/v1/static.json names_v1.py $G/v1/digimon_v1.asm
 python3 asm.py $G/v1/digimon_v1.asm $G/v1/roundtrip.bin $BRICK && cmp $G/v1/roundtrip.bin $ROM
 python3 export_ghidra_map.py $G/v1/static.json names_v1.py $G/v1/ghidra_map.tsv
+
+# Ver. 2: walker, names carried over by alignment, listing, round trip, Ghidra map
+ROM2=$PWD/../../roms/digimon_v2.bin
+python3 walker.py $ROM2 $G/v2 $BRICK
+python3 port_names.py names_v1.py ../../data/v1v2_align.json $G/v1/static.json $G/v2/static.json $G/v2/names_v2.py
+python3 listing.py $G/v2/static.json $G/v2/names_v2.py $G/v2/digimon_v2.asm
+python3 asm.py $G/v2/digimon_v2.asm $G/v2/roundtrip.bin $BRICK && cmp $G/v2/roundtrip.bin $ROM2
+python3 export_ghidra_map.py $G/v2/static.json $G/v2/names_v2.py $G/v2/ghidra_map.tsv
 cd ../..
 
 # 3. figures and appendices
@@ -909,8 +1081,9 @@ python3 tools/figures/gen_appendices.py $G/v1/static.json $G/cov tools/static/na
 
 `generated/` is ignored by git: the listing in it is the ROM in another form.
 
-Ghidra: install the E0C6S46 module as a user extension, compile its `.slaspec` with
-`support/sleigh`, then
+Ghidra (details and measured results in [`ghidra/README.md`](../ghidra/README.md); the
+maps for both versions are already in `data/ghidra/`): install the E0C6S46 module as a user
+extension, compile its `.slaspec` with `support/sleigh`, then
 
 ```sh
 analyzeHeadless PROJ digimon -import $ROM -processor E0C6S46:2:default \

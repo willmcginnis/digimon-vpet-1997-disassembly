@@ -25,11 +25,11 @@ emulator, or checked mechanically), **read** (inferred from the code) or **docum
 | Path | |
 |---|---|
 | `article/` | the article, its appendices (every subroutine, RAM, I/O) and its figures |
-| `tools/static/` | control-flow walker, a disassembler with three fixes, the annotated-listing generator and an assembler that checks it reproduces the ROM byte for byte, the Ghidra map exporter, subsystem classifier, name tables |
-| `tools/emulation/` | headless driver for BrickEmuPy's E0C6200 core, a two-unit link cable with tamper hook, trace harness (coverage, memory access, task attribution, mode transitions, screens), the battle-threshold measurement, the experiments, and a script that rebuilds every saved state from power-on |
+| `tools/static/` | control-flow walker, a disassembler with two upstream bugs patched, the annotated-listing generator and an assembler that checks it reproduces the ROM byte for byte, the Ghidra map exporter, the Ver. 1 → Ver. 2 name porter, subsystem classifier, name tables |
+| `tools/emulation/` | headless driver for BrickEmuPy's E0C6200 core, a two-unit link cable with tamper hook, trace harness (coverage, memory access, task attribution, mode transitions, screens), the battle-threshold, care-rule and starvation measurements, the experiments, and a script that rebuilds every saved state from power-on |
 | `tools/figures/` | the figure and appendix generators |
-| `ghidra/` | headless Ghidra 12 scripts for the E0C6S46 processor module: seed and export, then apply the recovered map |
-| `data/` | small derived data: the battle threshold table, the LCD layout, the Ver.1/Ver.2 alignment |
+| `ghidra/` | headless Ghidra 12 scripts for the E0C6S46 processor module (seed and export, apply the recovered map, an address probe) and a README with the measured comparison for both versions |
+| `data/` | small derived data: battle threshold tables, the measured care and evolution rules for both versions, the LCD layout, the Ver.1/Ver.2 alignment, and `data/ghidra/` (ready-made Ghidra maps for both versions plus Ghidra's coverage and function exports, alone and mapped) |
 | `roms/` | checksums only |
 
 ## No ROM here

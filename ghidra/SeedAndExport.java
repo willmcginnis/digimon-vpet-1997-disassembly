@@ -24,9 +24,17 @@ public class SeedAndExport extends GhidraScript {
         Listing listing = currentProgram.getListing();
         FunctionManager fm = currentProgram.getFunctionManager();
 
-        // Reset is bank 0 page 1 step 0; interrupt vectors are page 1 steps 2..0xC.
-        long[] seeds = {0x100, 0x102, 0x104, 0x106, 0x108, 0x10A, 0x10C};
-        String[] names = {"reset_vector", "int_vec_02", "int_vec_04", "int_vec_06", "int_vec_08", "int_vec_0A", "int_vec_0C"};
+        // Reset is bank 0 page 1 step 0; interrupt vectors are page 1 steps 2..0xC. The core
+        // vectors into page 1 of the bank that is executing, so bank 1 has its own table at
+        // 0x1100 (pass "bank0" as a second argument to seed only the bank-0 table).
+        boolean bank0Only = getScriptArgs().length > 1 && getScriptArgs()[1].equals("bank0");
+        long[] all = {0x100, 0x102, 0x104, 0x106, 0x108, 0x10A, 0x10C,
+                      0x1100, 0x1102, 0x1104, 0x1106, 0x1108, 0x110A, 0x110C};
+        String[] allNames = {"reset_vector", "int_vec_02", "int_vec_04", "int_vec_06", "int_vec_08", "int_vec_0A", "int_vec_0C",
+                             "b1_reset_vector", "b1_int_vec_02", "b1_int_vec_04", "b1_int_vec_06", "b1_int_vec_08", "b1_int_vec_0A", "b1_int_vec_0C"};
+        int nSeeds = bank0Only ? 7 : all.length;
+        long[] seeds = java.util.Arrays.copyOf(all, nSeeds);
+        String[] names = java.util.Arrays.copyOf(allNames, nSeeds);
         for (int i = 0; i < seeds.length; i++) {
             Address a = W(seeds[i]);
             new DisassembleCommand(a, null, true).applyTo(currentProgram, monitor);
@@ -65,7 +73,7 @@ public class SeedAndExport extends GhidraScript {
                 StringBuilder cr = new StringBuilder();
                 for (Function c : callers) cr.append(c.getEntryPoint()).append(',');
                 fw.printf("%s\t%s\t%d\t%d\t%s\t%s%n", f.getEntryPoint(), f.getName(),
-                        f.getBody().getNumAddresses(), n, cr, ce);
+                        f.getBody().getNumAddresses() / rom.getAddressableUnitSize(), n, cr, ce);
             }
         }
         // Coverage: which ROM words are covered by an instruction (one Address per word)

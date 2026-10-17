@@ -33,6 +33,10 @@ for e, f in sorted(static["functions"].items(), key=lambda kv: int(kv[0], 16)):
     else:
         nm = f.get("vector_name") or "sub_%s" % e
         out.append(("func", e, nm, "%d callers" % len(f["callers"])))
+funcs = {int(e, 16) for e in static["functions"]}
+for ea, (nm, conf, note) in sorted(names.FUNCS.items()):
+    if ea not in funcs:  # named entry points reached by jumps (main loop, mode handlers)
+        out.append(("label", "%04X" % ea, nm, ("[%s] %s" % (conf, note)).strip()))
 for ea, (nm, conf, note) in sorted(names.LABELS.items()):
     out.append(("label", "%04X" % ea, nm, ("[%s] %s" % (conf, note)).strip()))
 for ea, (nm, conf, note) in sorted(names.RAM.items()):
