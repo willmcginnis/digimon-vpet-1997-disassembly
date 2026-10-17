@@ -521,7 +521,9 @@ consecutive battle between two emulated children injured one). Each battle also 
 from the counter at `M(8C–8D)` (**measured** across consecutive battles; that it is the
 energy the community describes is **read**). An injury left untreated is counted in hours, and at six the code at `0x08D3`
 calls `enter_death_sequence` (`0x07D7`), which sets mode B (**measured**: the death
-sequence began at 359 minutes):
+sequence began 360 emulated minutes after the injuring battle, rebuilt from power-on by
+`tools/emulation/make_states.py`; and at routine level, injury time 5:59 → 6:00 kills while
+4:59 → 5:00 does not):
 
 ```asm
 08D6  ld X, 0x38
@@ -899,7 +901,7 @@ ones to check.
 | Battles and win score carry over; care mistakes and injuries reset | `0x0C17` with every counter preset | `M(98–99)` kept; `M(31–37)` cleared |
 | Waking and sleeping hours of all 13 Digimon | `0x0C17` per slot | all 13 identical |
 | A care mistake when a call goes unanswered for 20 minutes | `0x08C3`: the call timer's tens digit reaching 2 | yes (**read**) |
-| Death after 6 hours injured | an untreated unit | death sequence at 359 minutes (§10) |
+| Death after 6 hours injured | an untreated unit | death sequence 360 minutes after the injury (§10) |
 | Death from 5 care mistakes once the lifespan is up | `0x08C8` with `M(76).1` set | the fifth calls `enter_death_sequence`; the fourth does not |
 
 The guide's FAQ wonders whether hunger and strength emptying together count as one care
