@@ -94,11 +94,12 @@ def main():
     for slot in range(0, 15):
         rows = []
         # the stage timer and its target start from zero at hatching (0823 clears 30-9F)
-        for a0, a2, clock_min_tens in ((0, 0, 0), (9, 4, 5), (0, 5, 0), (9, 15, 5)):
-            cpu = R.run(0x0C17, {0x0B: slot, 0xA0: a0, 0xA2: a2, 0x1D: clock_min_tens,
-                                 0x4C: 0, 0x4D: 0, 0x4E: 0, 0x4F: 0})
+        # every dice nibble the setup can read is set explicitly (A1 decides Botamon's branch)
+        for a0, a1, a2, clock_min_tens in ((0, 0, 0, 0), (9, 4, 4, 5), (0, 5, 5, 0), (9, 9, 15, 5)):
+            cpu = R.run(0x0C17, {0x0B: slot, 0xA0: a0, 0xA1: a1, 0xA2: a2, 0xA3: 0,
+                                 0x1D: clock_min_tens, 0x4C: 0, 0x4D: 0, 0x4E: 0, 0x4F: 0})
             m4c, m4d, m4e, m4f = mem(cpu, 0x4C, 0x4D, 0x4E, 0x4F)
-            rows.append({"dice_A0": a0, "dice_A2": a2, "clock_min_tens": clock_min_tens,
+            rows.append({"dice_A0": a0, "dice_A1": a1, "dice_A2": a2, "clock_min_tens": clock_min_tens,
                          "next_evo_minutes": m4d * 10 + m4c, "next_evo_hours": m4f * 16 + m4e,
                          "raw_4C_4F": [m4c, m4d, m4e, m4f]})
         cpu = R.run(0x0C17, {0x0B: slot})

@@ -59,9 +59,16 @@ def _clock(self):
         k = (self._RAM[0x09], self._RAM[0x0A])
         if k not in FRAMES:
             FRAMES[k] = list(self.get_VRAM())
-    return _orig(self)
+    # only accesses made while an instruction executes are recorded; scenario set-up
+    # (pet.poke) and observation (pet.ram, pet.frame) go through the same accessors
+    _IN_CPU[0] = True
+    try:
+        return _orig(self)
+    finally:
+        _IN_CPU[0] = False
 
 
+_IN_CPU = [False]
 E0C6200.clock = _clock
 
 MEM = {}
@@ -69,7 +76,8 @@ _og, _os = E0C6200.get_mem, E0C6200.set_mem
 
 
 def _gm(self, addr):
-    MEM.setdefault(addr, [set(), set()])[0].add(self._PC & 0x1FFF)
+    if _IN_CPU[0]:
+        MEM.setdefault(addr, [set(), set()])[0].add(self._PC & 0x1FFF)
     return _og(self, addr)
 
 
@@ -79,6 +87,8 @@ _tick = [0]
 
 
 def _sm(self, addr, value):
+    if not _IN_CPU[0]:
+        return _os(self, addr, value)
     MEM.setdefault(addr, [set(), set()])[1].add(self._PC & 0x1FFF)
     if addr in (0x09, 0x0A):
         old9, oldA = _og(self, 0x09), _og(self, 0x0A)

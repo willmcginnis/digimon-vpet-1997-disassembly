@@ -6,3 +6,9 @@ generated/
 *.asm
 *.pkl
 __pycache__/
+# Ghidra projects contain the ROM; raw Ghidra exports contain its instructions.
+*.gpr
+*.rep/
+listing.txt
+refs.tsv
+instr_starts.txt

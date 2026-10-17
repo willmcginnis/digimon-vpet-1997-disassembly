@@ -19,16 +19,24 @@ it yourself from your own dump.
 3. Run Ghidra twice, as below:
 
 ```sh
-G=~/ghidra_12.0.4_PUBLIC/support/analyzeHeadless
+G=$PWD/generated ROM=$PWD/roms/digimon_v1.bin
+H=~/ghidra_12.0.4_PUBLIC/support/analyzeHeadless
+mkdir -p $G/ghidra/proj $G/ghidra/v1_alone $G/ghidra/v1_mapped
 # 1. Ghidra on its own
-$G PROJ digimon -import digimon_v1.bin -overwrite -processor E0C6S46:2:default \
+$H $G/ghidra/proj digimon -import $ROM -overwrite -processor E0C6S46:2:default \
    -loader BinaryLoader -loader-baseAddr 0 -scriptPath ghidra \
-   -postScript SeedAndExport.java out/v1_alone
+   -postScript SeedAndExport.java $G/ghidra/v1_alone
 # 2. the same program with the recovered map applied
-$G PROJ digimon -process digimon_v1.bin -noanalysis -scriptPath ghidra \
+$H $G/ghidra/proj digimon -process digimon_v1.bin -noanalysis -scriptPath ghidra \
    -postScript ApplyMap.java data/ghidra/ghidra_map_v1.tsv \
-   -postScript SeedAndExport.java out/v1_mapped
+   -postScript SeedAndExport.java $G/ghidra/v1_mapped
 ```
+
+Everything Ghidra writes goes under `generated/`, which git ignores. Keep it there. The
+project holds the ROM, and the exported `listing.txt` and `refs.tsv` hold its
+instructions; only the address, coverage and name exports in `data/ghidra/` are safe to
+publish. The scripts expect their output directory to exist. Tested with Ghidra 12.0.4
+and the module at revision `9382782`.
 
 The maps for both versions are already in `data/ghidra/`. They hold addresses and names
 only, so you can use them without running the walker. To regenerate them, see

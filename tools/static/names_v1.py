@@ -61,7 +61,7 @@ FUNCS = {
     0x0B5B: ("task_link_tx", "measured", "transmit a queued 16-bit word on the prong"),
     0x0410: ("task_mode_render", "read", "state machine: switch on mode M(09) to each screen's handler"),
     0x0A00: ("task_sound", "read", "sound sequencer flags in M(17)"),
-    0x0E7B: ("rng_step", "measured", "A1A0 += 73 (BCD), A3A2 += 0x73 (binary); once per main-loop pass"),
+    0x0E7B: ("rng_step", "measured", "A1A0 += 73 + entry carry (BCD), A3A2 += 0x73 + decimal carry; once per main-loop pass"),
     # ---- key handling --------------------------------------------------------
     0x0EC9: ("key_handler_mode_dispatch", "measured", "per-mode key handling; grave screen falls through"),
     0x0CEF: ("grave_key_AC_new_egg", "measured", "A+C on the death screen -> mode 0 (new egg)"),
@@ -87,7 +87,7 @@ FUNCS = {
     0x0E66: ("swap_display_buffers", "read", "exchange two display halves (left/right facing)"),
     0x0E73: ("draw_heart_icon", "read", "RETD table: heart glyph"),
     0x0563: ("draw_hearts_meter", "measured", "4 hearts: outline glyph inline (056C), full heart via 0E57"),
-    0x1230: ("species_gfx_dispatch", "read", "32-entry pset/jp table at 0x1200 indexed by slot M(0B)"),
+    0x1230: ("species_gfx_dispatch", "read", "16-entry, 32-word pset/jp table at 0x1200 indexed by slot M(0B)"),
 }
 
 LABELS = {
@@ -158,7 +158,7 @@ RAM = {
     0x98: ("win_score", "measured", "+1 per win, -1 per loss, 0..15; picks the Perfect roll's odds"),
     0x99: ("battle_count", "measured", "saturates at 15; the Perfect roll needs 15"),
     0x8C: ("energy", "measured", "battle energy (decrements per battle)"),
-    0xA0: ("rng", "measured", "4 nibbles; A1A0 BCD +73, A3A2 binary +0x73 per loop pass"),
+    0xA0: ("rng", "measured", "4 nibbles; A1A0 BCD +73+carry-in, A3A2 binary +0x73+decimal carry per loop pass"),
 }
 
 IO = {

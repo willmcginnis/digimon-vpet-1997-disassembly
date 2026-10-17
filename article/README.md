@@ -112,10 +112,13 @@ Four instruments, each checking the others.
    instruction set matches this core.
 3. **A purpose-built control-flow walker** that follows the paging rules exactly as the
    emulator's core executes them, resolves `JPBA` jump tables (including an idiom that
-   doubles the index into a 32-entry table of two-word entries), and handles `RETS`, which
+   doubles the index into a 16-entry, 32-word table of two-word entries), and handles `RETS`, which
    returns past the instruction after the call.
 4. **A reassembler** built by inverting the disassembler. If the annotated listing
-   reassembles to the identical ROM, nothing was lost or misread in the text.
+   reassembles to the identical ROM, no bit of the ROM was lost in the text. That proves
+   the listing is complete. It does not prove every mnemonic is right, because the
+   assembler inverts the same tables; the meanings were checked separately against the
+   emulator core, Epson's manual and execution.
 
 What each found, for Ver. 1:
 
@@ -538,7 +541,7 @@ There are two ways into an injury, and both go through the same routine, `set_in
 `0x0510` (**read**):
 
 - **After a battle**, the code at `0x01EC` adds a per-species chance to a second value and
-  compares the sum with the dice nibble `M(A3)`; if the dice fall below it, the Digimon is
+  compares the sum with the dice nibble `M(A3)`; if the dice are at or below it, the Digimon is
   injured.
 - **From neglect of the toilet.** `M(07)` counts the piles on screen. A timer at
   `M(80–82)` makes the life clock set mode **A**, a short squatting animation (the scenarios
@@ -592,20 +595,35 @@ Every random decision in the game draws on four nibbles at `A0`–`A3`, advanced
 0E86  ret
 ```
 
-It is not a random number generator in any statistical sense. It is two chained counters.
-The decimal pair `A1:A0` steps by 73. The binary pair `A3:A2` steps by `0x73`, plus the
-carry out of the decimal add, because nothing clears the carry flag between the two
-(**measured** over 171 consecutive passes: the decimal step was 73 every time; the binary
-step was `0x74` on exactly the 125 passes where the decimal counter wrapped past 99, and
-`0x73` otherwise). Every 100 passes the decimal counter returns to its start and the
-binary counter has moved by 53, which shares no factor with 256, so the pair repeats only
-after **25,600 passes** — about an hour and three quarters at the four passes a second an
-idle unit makes (**measured**: 172 passes in 42 s). The battle roll reads just `M(A3)`,
-the top nibble of the binary counter. Its unpredictability comes entirely from the number of main-loop passes that
-happen between decisions, which depends on button presses, animation and the link. That is
-why a sweep of battle start times (§13) finds the outcome flipping with a few hundred
-milliseconds' difference in when B is pressed, and why no fixed button sequence can steer
-it.
+It is not a random number generator in any statistical sense. It is two chained counters,
+and both of them add a carry. The first instruction is `adc`, and nothing in `rng_step`
+clears the carry flag on the way in, so the decimal pair `A1:A0` steps by 73 plus whatever
+carry the previous code left behind. The binary pair `A3:A2` then steps by `0x73` plus the
+carry out of the decimal add. **Measured:**
+
+- **One pass per heartbeat.** An idle unit makes exactly one pass per heartbeat: 84 calls
+  in 42 seconds for an egg, a baby and a child alike (`tools/emulation/rng_rate.py`).
+- **The entry carry depends on the state.** The child and the baby entered with the carry
+  clear every time, so their decimal step was 73. The egg entered with it set, so its step
+  was 74.
+- **The binary step follows the decimal wrap.** In a run of 171 consecutive passes from
+  a child, the binary step was `0x74` on exactly the 125 passes where the decimal counter
+  wrapped past 99, and `0x73` otherwise.
+
+With the carry clear, the decimal counter returns to its start every 100 passes, and by
+then the binary counter has moved by 53. 53 shares no factor with 256, so the pair repeats
+only after **25,600 passes**, three and a half hours at two passes a second. With the carry
+set, the period is **12,800 passes**. Both periods were measured by calling the routine
+until it returned to its starting state.
+
+The battle roll reads just `M(A3)`, the top nibble of the binary counter. Nothing about
+the dice is random: from a known state, the same inputs at the same moments give the same
+results every time. What makes them unpredictable in play is that their state carries the
+whole history since power-on, including every extra pass a button press or an animation
+caused, and the player can't see it. That is why a sweep of battle start times (§13) finds
+the outcome flipping with a few hundred milliseconds' difference in when B is pressed. It is
+also why a fixed button sequence, pressed without knowing the dice's current state, can't
+aim them.
 
 ---
 
@@ -804,11 +822,13 @@ their 8-bit step so that shifted code still matches (**measured**):
 | whole ROM | 4,812 / 8,192 — 59%, in 755 runs, the longest 246 words |
 
 The battle outcome routine is the cleanest example. Four words later in Ver. 2 (`0x0D7E`),
-its comparison tree is identical instruction for instruction, both slips of §13 included,
-and executing it yields the same threshold table (**measured**). Exactly one word of the
-routine differs, after the roll: where Ver. 1 writes `0` beside the result and sends `0`
-in the second nibble of packet 2 (`0DE5 ldpx M(X), 0x0`), Ver. 2 loads whatever `M(78)`
-holds and sends that instead (`0DE9 ldpx A, M(X)`) (**read**). DMComm documents that
+its comparison tree is the same instruction for instruction once the jump targets are
+relocated by four, both slips of §13 included, and executing it yields the same threshold
+table (**measured**). Of the routine's 113 words, 42 differ. Forty are those relocated
+branch targets, and two are real changes, both after the roll (**measured**, word by
+word). Where Ver. 1 writes `0` beside the result (`0DE5 ldpx M(X), 0x0`) and sends `0` in
+the second nibble of packet 2 (`0DE9 ldpx M(X), 0x0`), Ver. 2 loads whatever `M(78)` holds
+(`0DE9 ldpx A, M(X)`) and sends that (`0DED ldpx M(X), A`). DMComm documents that
 nibble as the device's version: 0 for Ver. 1, 1 for Ver. 2, and a Ver. 1 going second
 echoes its opponent's. A constant 0 in Ver. 1 and a stored value in Ver. 2 fit that
 description. The two ROMs are one
@@ -917,7 +937,8 @@ So one unanswered call makes one care mistake (**read**).
    (`0x0341`–`0x0347`); only the boost formula caps it at 4. The uncapped count feeds the
    injury roll, which the guide doesn't describe. After every battle, `0x01EC` injures the
    Digimon when the dice `M(A3)` are at or below a per-species base plus the overdose
-   count. The chance is (base + overdoses + 1) / 16. The base is 3 for Betamon and
+   count. Writing *s* for base plus overdoses, the chance is (*s* + 1)/16 up to *s* = 14;
+   an overflowing sum (16 and up) is capped at a threshold of 14, which is 15/16. The base is 3 for Betamon and
    Numemon; 2 for Agumon, Tyranomon and Seadramon; 1 for Greymon, Devimon, Meramon,
    Airdramon and MetalGreymon; and 0 for Mamemon and Monzaemon. The roll also has a hole.
    When base plus overdoses is exactly 15, `0x01F4` skips it altogether, so an Agumon with
@@ -992,8 +1013,9 @@ Two smaller things are worth knowing if you use the module on other ROMs:
   `PCP ← NPP, PCS ← s`, with no bank transfer; **documented**), and it matches `RET`, which
   cannot return across banks either. BrickEmuPy's core instead takes the bank from the
   `PSET`, contrary to the manual text quoted in its own comment. This ROM never makes a
-  cross-bank call (**measured**: 0 sites; bank 1 is entered only by 79 cross-bank
-  `PSET`+`JP`s, which both handle identically), so here the difference is moot.
+  cross-bank call (**measured**: 0 sites). Its 80 cross-bank transfers are all
+  `PSET`-prefixed jumps: 43 into bank 1, one of them conditional, and 37 back to bank 0.
+  Both the module and the core handle those identically, so here the difference is moot.
 - The `rom` space is word-addressed, but Ghidra's `AddressSpace.getAddress(long)` takes a
   *byte* offset: word `0x110` is `getAddress(0x220)`. Address *strings*, such as the
   `.pspec`'s `start` symbol at `rom:0x110`, are already in words; that symbol lands on word
@@ -1050,8 +1072,10 @@ of the images used is in `roms/SHA256SUMS`.
 
 ```sh
 git clone https://github.com/azya52/BrickEmuPy
-export BRICK=$PWD/BrickEmuPy ROM=$PWD/roms/digimon_v1.bin G=$PWD/generated
-mkdir -p $G/v1 $G/cov
+git -C BrickEmuPy checkout 376cca9        # the revision every number here was measured with
+export BRICK=$PWD/BrickEmuPy ROM=$PWD/roms/digimon_v1.bin ROM2=$PWD/roms/digimon_v2.bin
+export G=$PWD/generated
+mkdir -p $G/v1 $G/v2 $G/cov
 
 # 1. saved states and emulation scenarios (coverage, memory traces with the PC of
 #    every access, task attribution, mode transitions, screens)
@@ -1063,8 +1087,16 @@ done
 python3 -c "import json,glob; print(json.dumps(sorted({p for f in glob.glob('$G/cov/*.json') \
   for p in json.load(open(f))['pcs']})))" > $G/executed.json
 PYTHONPATH=$BRICK python3 threshold.py $ROM ../../data/battle_threshold_v1.json 0D7A
+PYTHONPATH=$BRICK python3 threshold.py $ROM2 ../../data/battle_threshold_v2.json 0D7E
+PYTHONPATH=$BRICK python3 threshold.py $ROM ../../data/battle_threshold_v1_whatif_cpB.json 0D7A \
+  --patch 0D84=DDB 0D96=DDB 0DAC=DDB 0DB9=DDB 0DC9=DDB
 PYTHONPATH=$BRICK python3 care_rules.py st_v1_childA.pkl ../../data/care_rules_v1.json
-PYTHONPATH=$BRICK python3 starvation.py st_v1_childA.pkl 0 $G/starvation_0.json
+PYTHONPATH=$BRICK python3 -c "import harness,pickle; p=harness.Pet('$ROM2'); p.reset(); \
+  p.run_seconds(2); pickle.dump(p, open('st_v2_fresh.pkl','wb'))"
+PYTHONPATH=$BRICK python3 care_rules.py st_v2_fresh.pkl ../../data/care_rules_v2.json
+PYTHONPATH=$BRICK python3 starvation.py st_v1_childA.pkl 0 ../../data/starvation_v1_from0.json
+PYTHONPATH=$BRICK python3 starvation.py st_v1_childA.pkl 6 ../../data/starvation_v1_from6.json
+PYTHONPATH=$BRICK python3 rng_rate.py st_v1_childA.pkl 42
 cd ../..
 
 # 2. static map, seeded with the executed PCs; annotated listing; lossless round trip
@@ -1075,9 +1107,9 @@ python3 listing.py $G/v1/static.json names_v1.py $G/v1/digimon_v1.asm
 python3 asm.py $G/v1/digimon_v1.asm $G/v1/roundtrip.bin $BRICK && cmp $G/v1/roundtrip.bin $ROM
 python3 export_ghidra_map.py $G/v1/static.json names_v1.py $G/v1/ghidra_map.tsv
 
-# Ver. 2: walker, names carried over by alignment, listing, round trip, Ghidra map
-ROM2=$PWD/../../roms/digimon_v2.bin
+# Ver. 2: walker, alignment, names carried over by it, listing, round trip, Ghidra map
 python3 walker.py $ROM2 $G/v2 $BRICK
+python3 align_versions.py $G/v1/static.json $G/v2/static.json ../../data/v1v2_align.json
 python3 port_names.py names_v1.py ../../data/v1v2_align.json $G/v1/static.json $G/v2/static.json $G/v2/names_v2.py
 python3 listing.py $G/v2/static.json $G/v2/names_v2.py $G/v2/digimon_v2.asm
 python3 asm.py $G/v2/digimon_v2.asm $G/v2/roundtrip.bin $BRICK && cmp $G/v2/roundtrip.bin $ROM2
@@ -1093,19 +1125,26 @@ python3 tools/figures/figs_data.py $G/v1/static.json $G/v1/classes.json $G/cov \
 python3 tools/figures/gen_appendices.py $G/v1/static.json $G/cov tools/static/names_v1.py article
 ```
 
-`generated/` is ignored by git: the listing in it is the ROM in another form.
+`generated/` is ignored by git: the listing in it is the ROM in another form. Keep every
+Ghidra project and raw export there too. A Ghidra project contains the ROM, and
+`listing.txt` and `refs.tsv` contain its instructions.
 
 Ghidra (details and measured results in [`ghidra/README.md`](../ghidra/README.md); the
-maps for both versions are already in `data/ghidra/`): install the E0C6S46 module as a user
-extension, compile its `.slaspec` with `support/sleigh`, then
+maps for both versions are already in `data/ghidra/`). Install the
+[E0C6S46 module](https://github.com/Veryyes/E0C6S46-Ghidra-Processor) at revision `9382782` as
+a user extension of Ghidra 12.0.4, and compile its `.slaspec` with `support/sleigh`. Then:
 
 ```sh
-analyzeHeadless PROJ digimon -import $ROM -processor E0C6S46:2:default \
-  -loader BinaryLoader -loader-baseAddr 0 -scriptPath ghidra \
-  -postScript SeedAndExport.java OUT
-analyzeHeadless PROJ digimon -process digimon_v1.bin -noanalysis -scriptPath ghidra \
-  -postScript ApplyMap.java $G/v1/ghidra_map.tsv -postScript SeedAndExport.java OUT_MAPPED
+mkdir -p $G/ghidra/proj $G/ghidra/v1_alone $G/ghidra/v1_mapped
+analyzeHeadless $G/ghidra/proj digimon -import $ROM -overwrite \
+  -processor E0C6S46:2:default -loader BinaryLoader -loader-baseAddr 0 \
+  -scriptPath ghidra -postScript SeedAndExport.java $G/ghidra/v1_alone
+analyzeHeadless $G/ghidra/proj digimon -process digimon_v1.bin -noanalysis -scriptPath ghidra \
+  -postScript ApplyMap.java data/ghidra/ghidra_map_v1.tsv \
+  -postScript SeedAndExport.java $G/ghidra/v1_mapped
 ```
+
+Tested with Python 3.12 and 3.13.
 
 
 ---

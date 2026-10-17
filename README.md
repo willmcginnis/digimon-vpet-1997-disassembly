@@ -25,8 +25,8 @@ emulator, or checked mechanically), **read** (inferred from the code) or **docum
 | Path | |
 |---|---|
 | `article/` | the article, its appendices (every subroutine, RAM, I/O) and its figures |
-| `tools/static/` | control-flow walker, a disassembler with two upstream bugs patched, the annotated-listing generator and an assembler that checks it reproduces the ROM byte for byte, the Ghidra map exporter, the Ver. 1 → Ver. 2 name porter, subsystem classifier, name tables |
-| `tools/emulation/` | headless driver for BrickEmuPy's E0C6200 core, a two-unit link cable with tamper hook, trace harness (coverage, memory access, task attribution, mode transitions, screens), the battle-threshold, care-rule and starvation measurements, the experiments, and a script that rebuilds every saved state from power-on |
+| `tools/static/` | control-flow walker, a disassembler with two upstream bugs patched, the annotated-listing generator and an assembler that checks it reproduces the ROM byte for byte, the Ghidra map exporter, the Ver. 1/Ver. 2 aligner and name porter, subsystem classifier, name tables |
+| `tools/emulation/` | headless driver for BrickEmuPy's E0C6200 core, a two-unit link cable with tamper hook, trace harness (coverage, memory access, task attribution, mode transitions, screens), the battle-threshold, care-rule, starvation and dice-rate measurements, the experiments, and a script that rebuilds every saved state from power-on |
 | `tools/figures/` | the figure and appendix generators |
 | `ghidra/` | headless Ghidra 12 scripts for the E0C6S46 processor module (seed and export, apply the recovered map, an address probe) and a README with the measured comparison for both versions |
 | `data/` | small derived data: battle threshold tables, the measured care and evolution rules for both versions, the LCD layout, the Ver.1/Ver.2 alignment, and `data/ghidra/` (ready-made Ghidra maps for both versions plus Ghidra's coverage and function exports, alone and mapped) |
@@ -48,3 +48,9 @@ faces made all of the measuring possible; to Veryyes for the
 [E0C6S46 Ghidra module](https://github.com/Veryyes/E0C6S46-Ghidra-Processor); to BladeSabre
 and the [DMComm](https://dmcomm.github.io/) project for the link protocol and the care
 mechanics; and to humulos and NHOKO for the growth charts.
+
+## Licence
+
+Code (`tools/`, `ghidra/*.java`): MIT or Apache-2.0, at your option. Article, figures and
+data: Apache-2.0, MIT or CC BY 4.0, at your option. Bandai's firmware excerpts, names and
+marks, and quoted third-party text are not covered. Details in [LICENSE.md](LICENSE.md).
